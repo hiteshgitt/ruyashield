@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon, type IconName } from "./Icon";
 
-export type NavGroup = { label: string; items: { href: string; label: string; icon: IconName }[] };
+export type NavGroup = { label: string; items: { href: string; label: string; icon: IconName; pro?: boolean }[] };
 
 /** Grouped navigation; the current section is marked with aria-current. Used by the sidebar and the mobile menu. */
 export function NavList({ groups }: { groups: NavGroup[] }) {
@@ -18,7 +18,7 @@ export function NavList({ groups }: { groups: NavGroup[] }) {
             {g.items.map((i) => (
               <li key={i.href}>
                 <Link href={i.href} aria-current={isActive(i.href) ? "page" : undefined}>
-                  <Icon name={i.icon} />{i.label}
+                  <Icon name={i.icon} />{i.label}{i.pro && <span className="nav-pro">Pro</span>}
                 </Link>
               </li>
             ))}

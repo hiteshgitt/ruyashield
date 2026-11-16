@@ -50,7 +50,7 @@ async function loadFinding(tx: Tx, c: Ctx, id: string, lock = false) {
 export const FREE_FINDING_LIMIT = 5;
 
 /** The findings a Free organization may open: its top FREE_FINDING_LIMIT by priority, within the caller's scope. */
-async function freeVisibleIds(tx: Tx, c: Ctx): Promise<Set<string>> {
+export async function freeVisibleIds(tx: Tx, c: Ctx): Promise<Set<string>> {
   const p = c.principal;
   const scope: SQL[] = [];
   if (grantFor(p.role, "finding.view") === "S" && p.restricted) {

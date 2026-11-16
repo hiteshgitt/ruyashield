@@ -8,7 +8,8 @@ import {
 } from "../db/schema";
 import { audit, type Actor } from "../audit/audit";
 import { AppError, isAppError, notFound } from "../errors";
-import { authorize, decide, type OrgFlags, type Principal, type Resource } from "../policy/policy";
+import { authorize, decide, isProOrg, type OrgFlags, type Principal, type Resource } from "../policy/policy";
+import { freeVisibleIds } from "../findings/findings";
 import { grantFor } from "../policy/matrix";
 import { enqueue } from "../outbox/outbox";
 import { EgressError, type DnsDeps, type EgressDeps } from "../net/egress";
@@ -211,7 +212,14 @@ export async function getAssessment(c: Ctx, id: string) {
       : [];
     const order = { critical: 0, high: 1, medium: 2, low: 3, info: 4 } as const;
     found.sort((p, q) => order[p.finding.severity] - order[q.finding.severity] || p.finding.title.localeCompare(q.finding.title));
-    return { assessment: x, asset: a, scope, runs, findings: found, canFindings };
+    // Severities of everything this run found (the meter stays complete); Free lists only its top findings.
+    const severities = found.map((r) => r.finding.severity);
+    let shown = found;
+    if (!isProOrg(c.org) && found.length) {
+      const visible = await freeVisibleIds(tx, c);
+      shown = found.filter((r) => visible.has(r.finding.id));
+    }
+    return { assessment: x, asset: a, scope, runs, findings: shown, severities, lockedFindings: found.length - shown.length, canFindings };
   });
 }
 

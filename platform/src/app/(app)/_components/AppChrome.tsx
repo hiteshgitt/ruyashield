@@ -54,6 +54,12 @@ export async function AppChrome() {
     ] },
   ].filter((g) => g.items.length > 0) : [];
 
+  // Free organizations: mark the sections that are Pro-only.
+  const PRO_HREFS = new Set(["/attacks", "/approvals", "/reports", "/settings/integrations"]);
+  if (c.ctx && c.ctx.org.plan !== "pro") {
+    for (const g of groups) for (const it of g.items) if (PRO_HREFS.has(it.href)) Object.assign(it, { pro: true });
+  }
+
   const name = c.session.displayName || c.session.email;
   const initials = name.split(/[\s@.]+/).filter(Boolean).slice(0, 2).map((p) => p[0]!.toUpperCase()).join("");
 

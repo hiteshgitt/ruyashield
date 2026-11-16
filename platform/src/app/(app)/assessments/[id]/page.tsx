@@ -11,7 +11,7 @@ import { Meter } from "../../_components/Meter";
 import { StatusBadge } from "../../_components/StatusBadge";
 import { cancelAssessmentAction, rerunAssessmentAction } from "../../actions";
 import { fmt, pageOrg } from "../../_lib/page";
-import { Loading, MetaChips } from "../../_components/Page";
+import { Loading, MetaChips, ProGate } from "../../_components/Page";
 import { TableWrap } from "../../_components/TableWrap";
 import { AutoRefresh } from "../../_components/AutoRefresh";
 import { SEVERITIES, StatCard } from "../../_components/Charts";
@@ -61,7 +61,7 @@ async function Assessment({ params }: { params: PageProps<"/assessments/[id]">["
     if (isAppError(e) && e.status === 404) notFound();
     throw e;
   }
-  const { assessment: x, asset: a, scope, runs, findings, canFindings } = data;
+  const { assessment: x, asset: a, scope, runs, findings, severities, lockedFindings, canFindings } = data;
   const active = ACTIVE_STATUSES.includes(x.status);
   const canCancel = active && x.status !== "cancelling" && grantFor(c.principal.role, "assessment.cancel") !== "N";
   const canRerun = !active && grantFor(c.principal.role, "assessment.launch") !== "N";
@@ -72,7 +72,7 @@ async function Assessment({ params }: { params: PageProps<"/assessments/[id]">["
   const full = x.status === "completed" && !!cov?.complete && okRuns === runs.length && runs.length > 0;
   const used = runs.reduce((n, { run }) => n + run.requestsUsed, 0);
   const took = duration(x.startedAt, x.finishedAt);
-  const sevCount = (sv: string) => findings.filter(({ finding: f }) => f.severity === sv).length;
+  const sevCount = (sv: string) => severities.filter((s) => s === sv).length;
   const worst = findings.map(({ finding: f }) => f.severity).sort((p, q) => SEV_RANK[p] - SEV_RANK[q])[0];
   const sorted = [...findings].sort((p, q) => SEV_RANK[p.finding.severity] - SEV_RANK[q.finding.severity]);
 
@@ -149,9 +149,9 @@ async function Assessment({ params }: { params: PageProps<"/assessments/[id]">["
             </tbody></table>
           </TableWrap>
 
-          {canFindings && findings.length > 0 && (
+          {canFindings && severities.length > 0 && (
             <>
-              <h2>Findings ({findings.length})</h2>
+              <h2>Findings ({severities.length})</h2>
               <div className="card panel">
                 <Meter empty="No findings." segments={SEVERITIES.map((sv) => ({ label: sv, count: sevCount(sv), tone: `sev-${sv}` }))} />
               </div>
@@ -165,6 +165,11 @@ async function Assessment({ params }: { params: PageProps<"/assessments/[id]">["
                   </div>
                 ))}
               </div>
+              {lockedFindings > 0 && (
+                <ProGate title={`${lockedFindings} more finding${lockedFindings === 1 ? "" : "s"} from this assessment`} features={["Every finding", "Evidence", "Zealot explanations", "Fix plans"]}>
+                  The Free plan shows your 5 highest-priority findings across all assets. The meter above counts everything this run found.
+                </ProGate>
+              )}
             </>
           )}
         </div>

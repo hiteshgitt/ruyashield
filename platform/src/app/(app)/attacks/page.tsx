@@ -49,7 +49,7 @@ async function Attacks({ searchParams }: { searchParams: PageProps<"/attacks">["
   const c = await pageOrg("/attacks");
   if (!isProOrg(c.org)) {
     return (
-      <ProGate title="Attack monitoring" rows={7}>
+      <ProGate title="Attack monitoring" rows={7} features={["Cloudflare firewall events", "Log agent", "Countries and networks", "Spike alerts"]}>
         Connect Cloudflare or a log agent and see where hostile traffic against your verified sites comes from: IP, country, network and attack type, with spike alerts.
       </ProGate>
     );

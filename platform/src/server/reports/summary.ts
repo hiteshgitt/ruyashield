@@ -5,7 +5,8 @@ import {
   type Coverage, type Severity,
 } from "../db/schema";
 import { AppError, forbidden } from "../errors";
-import { authorize, decide, type OrgFlags, type Principal } from "../policy/policy";
+import { authorize, decide, isProOrg, type OrgFlags, type Principal } from "../policy/policy";
+import { freeVisibleIds } from "../findings/findings";
 import { grantFor, type Action } from "../policy/matrix";
 import { OPEN_STATUSES } from "../findings/lifecycle";
 import { prioritySql } from "../findings/priority";
@@ -128,7 +129,12 @@ export async function securitySummary(
 
     const score = prioritySql(findings.severity, findings.confidence, assets.criticality);
     const topOpen = await tx.select({ id: findings.id, title: findings.title, severity: findings.severity, status: findings.status, host: assets.host, dueAt: findings.dueAt })
-      .from(findings).innerJoin(assets, eq(assets.id, findings.assetId)).where(and(open, inScope)).orderBy(desc(score), findings.id).limit(10);
+      .from(findings).innerJoin(assets, eq(assets.id, findings.assetId)).where(and(open, inScope)).orderBy(desc(score), findings.id).limit(10)
+      .then(async (rows) => {
+        if (isProOrg(c.org)) return rows;
+        const visible = await freeVisibleIds(tx, c);
+        return rows.filter((r) => visible.has(r.id));
+      });
 
     const [m] = await tx.select({ count: sql<number>`count(*)` }).from(memberships).where(eq(memberships.orgId, c.org.id));
     const [anyAssessment] = await tx.select({

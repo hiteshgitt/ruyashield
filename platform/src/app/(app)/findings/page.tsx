@@ -124,7 +124,7 @@ async function Findings({ searchParams }: { searchParams: PageProps<"/findings">
         </TableWrap>
       )}
       {data.lockedCount > 0 && (
-        <ProGate title={`${data.lockedCount} more finding${data.lockedCount === 1 ? "" : "s"} hidden`} rows={5}>
+        <ProGate title={`${data.lockedCount} more finding${data.lockedCount === 1 ? "" : "s"} hidden`} rows={5} features={["All findings", "Evidence", "Zealot AI", "Fix plans", "FixProof re-tests"]}>
           The Free plan shows your {FREE_FINDING_LIMIT} highest-priority findings in full. The severity counts above include every finding; Pro lists all of them with evidence, Zealot explanations and fix plans.
         </ProGate>
       )}

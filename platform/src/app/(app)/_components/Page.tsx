@@ -46,25 +46,40 @@ export function ProNotice({ children }: { children: ReactNode }) {
 }
 
 /**
- * A locked Pro area for Free organizations: a blurred placeholder of what is there, what it is, and the way
- * to unlock it. Nothing real is rendered underneath; the server does not send the data either.
+ * A locked Pro area for Free organizations: a blurred placeholder of what is there, what it is, what Pro
+ * unlocks, and the way to get it. Nothing real is rendered underneath; the server does not send the data.
  */
-export function ProGate({ title, children, rows = 3, compact = false }: { title: string; children: ReactNode; rows?: number; compact?: boolean }) {
+export function ProGate({ title, children, features = [], rows = 4, compact = false }: {
+  title: string; children: ReactNode; features?: string[]; rows?: number; compact?: boolean;
+}) {
   return (
     <section className={`pro-gate${compact ? " compact" : ""}`} aria-label={`${title} (Pro)`}>
       <div className="pro-gate-fake" aria-hidden="true">
-        {Array.from({ length: rows }, (_, i) => <span key={i} style={{ width: `${92 - ((i * 17) % 40)}%` }} />)}
+        {Array.from({ length: rows }, (_, i) => <span key={i} style={{ width: `${94 - ((i * 19) % 42)}%` }} />)}
       </div>
       <div className="pro-gate-body">
         <span className="pro-gate-lock" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5" /><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" /></svg>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5" /><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" /></svg>
         </span>
         <div className="pro-gate-text">
-          <h3>{title} <span className="badge pro">Pro</span></h3>
-          <p>{children}</p>
+          <p className="pro-gate-kicker">RuyaShield Pro</p>
+          <h3>{title}</h3>
+          <p className="pro-gate-desc">{children}</p>
+          {features.length > 0 && <ul className="pro-gate-features">{features.map((f) => <li key={f}>{f}</li>)}</ul>}
         </div>
-        <a className="button pro-gate-cta" href="/settings/plan">Get Pro to see all</a>
+        <a className="pro-gate-cta" href="/settings/plan">Get Pro to see all <span aria-hidden="true">→</span></a>
       </div>
     </section>
+  );
+}
+
+/** Slim banner on every page of a Free organization, so the limits are clear before anyone looks for data. */
+export function FreeBanner() {
+  return (
+    <div className="free-banner" role="note">
+      <span className="free-banner-badge">Free plan</span>
+      <span className="free-banner-text">You see your 5 highest-priority findings with suggested fixes. Pro unlocks every finding, evidence, Zealot, fixes, re-tests, attacks and reports.</span>
+      <a className="free-banner-cta" href="/settings/plan">See plans <span aria-hidden="true">→</span></a>
+    </div>
   );
 }

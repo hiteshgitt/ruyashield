@@ -110,6 +110,12 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/dashboard
           sub={`Last completed: ${fmt(a.lastCompletedAt)}`} />
       </section>
 
+      {!isProOrg(c.org) && (
+        <ProGate title="Trends, asset map and attack monitoring" rows={5} features={["Weekly trend of found and fixed", "Asset map, riskiest first", "Attack origins", "Reports"]}>
+          See how findings open and close week by week, every asset on one map, and where hostile traffic comes from.
+        </ProGate>
+      )}
+
       <section className="card panel areas-panel" aria-labelledby="areas-h">
         <h3 id="areas-h">What we check, most important first</h3>
         <p className="small muted">Each area links to its open findings. &quot;Not run yet&quot; means no result yet, which is not a pass. &quot;Not scanned by RuyaShield yet&quot; means we do not cover that area today.</p>
@@ -118,7 +124,7 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/dashboard
 
       {coverage && coverage.assets.length > 0 && <UptimeCard coverage={coverage} canConnect={canConnect} />}
 
-      {isProOrg(c.org) ? (
+      {isProOrg(c.org) && (
       <div className="dash-wide">
         <section className="card panel" aria-labelledby="trend-h">
           <h3 id="trend-h">Findings over the last {TREND_WEEKS} weeks</h3>
@@ -136,10 +142,6 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/dashboard
           </ul>
         </section>
       </div>
-      ) : (
-        <ProGate title="Trends and asset map" rows={5}>
-          See how findings open and close week by week, and every asset on one map, riskiest first.
-        </ProGate>
       )}
 
       <div className="panels panels-2">

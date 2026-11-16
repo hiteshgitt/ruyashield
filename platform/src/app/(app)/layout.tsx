@@ -3,6 +3,9 @@ import Link from "next/link";
 import { Funnel_Display, Funnel_Sans, Geist_Mono } from "next/font/google";
 import { AppChrome } from "./_components/AppChrome";
 import { ShellBehavior } from "./_components/ShellBehavior";
+import { FreeBanner } from "./_components/Page";
+import { getContext } from "@/server/context";
+import { isProOrg } from "@/server/policy/policy";
 import "./app.css";
 
 // Same faces as the public site: Funnel Display for headings, Funnel Sans for text, Geist Mono for labels and code.
@@ -19,10 +22,20 @@ export default function AppLayout({ children }: Readonly<{ children: React.React
         <Suspense fallback={<header className="topbar"><Link href="/" className="brand">RuyaShield</Link></header>}>
           <AppChrome />
         </Suspense>
-        <main id="app-main" tabIndex={-1}>{children}</main>
+        <main id="app-main" tabIndex={-1}>
+          <Suspense fallback={null}><PlanBanner /></Suspense>
+          {children}
+        </main>
       </div>
       {/* Reads the pathname, which dynamic routes only know at request time. */}
       <Suspense fallback={null}><ShellBehavior /></Suspense>
     </div>
   );
+}
+
+/** Free organizations see their plan's limits at the top of every page. */
+async function PlanBanner() {
+  const c = await getContext();
+  if (!c?.ctx || c.ctx.principal.breakGlassId || isProOrg(c.ctx.org)) return null;
+  return <FreeBanner />;
 }

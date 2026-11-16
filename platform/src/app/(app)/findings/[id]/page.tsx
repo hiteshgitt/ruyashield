@@ -55,7 +55,7 @@ async function Finding({ params }: { params: PageProps<"/findings/[id]">["params
   } catch (e) {
     if (isAppError(e) && e.status === 404) notFound();
     if (isAppError(e) && e.code === "pro_required") {
-      return <ProGate title="This finding is part of Pro" rows={6}>{e.message}</ProGate>;
+      return <ProGate title="This finding is part of Pro" rows={6} features={["Every finding", "Evidence", "Zealot AI", "Fix plans"]}>{e.message}</ProGate>;
     }
     throw e;
   }
@@ -134,7 +134,7 @@ async function Finding({ params }: { params: PageProps<"/findings/[id]">["params
 
           <SectionHead title="Evidence"><span className="source-tag verified">Captured by RuyaShield checks</span></SectionHead>
           {!pro ? (
-            <ProGate title="Evidence" rows={4}>The exact request, response and headers RuyaShield captured for this finding, integrity-checked with SHA-256.</ProGate>
+            <ProGate title="Evidence" rows={4} compact features={["Request and response", "Headers", "SHA-256 integrity"]}>The exact request, response and headers RuyaShield captured for this finding, integrity-checked with SHA-256.</ProGate>
           ) : f.latestEvidenceId
             ? <Suspense fallback={<Loading what="evidence" />}><Evidence c={c} id={f.latestEvidenceId} raw={can.downloadRaw} /></Suspense>
             : <div className="card evidence small"><pre className="evidence-body" tabIndex={0} aria-label="Evidence">{JSON.stringify(f.evidence, null, 2)}</pre><p className="muted">Recorded before evidence storage (P2); no integrity hash.</p></div>}
@@ -150,7 +150,7 @@ async function Finding({ params }: { params: PageProps<"/findings/[id]">["params
           ) : (
             <>
               <SectionHead title="Investigate, fix and prove" />
-              <ProGate title="Zealot, fix plans and FixProof re-tests" rows={6}>
+              <ProGate title="Zealot, fix plans and FixProof re-tests" rows={6} features={["Zealot AI explanation", "Reviewed fix plan", "Approvals", "FixProof re-test"]}>
                 Zealot explains this finding with cited evidence, prepares a reviewed fix plan for approval, and a FixProof re-test confirms the fix before the finding is closed.
               </ProGate>
             </>

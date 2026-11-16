@@ -6,7 +6,8 @@ import { ActionForm } from "../../_components/ActionForm";
 import { StatusBadge } from "../../_components/StatusBadge";
 import { addRepositoryAssetAction, createIntegrationAction, disableIntegrationAction } from "../../actions";
 import { fmt, pageOrg } from "../../_lib/page";
-import { Empty, Loading, MetaChips, PageHeader } from "../../_components/Page";
+import { Empty, Loading, MetaChips, PageHeader, ProGate } from "../../_components/Page";
+import { isProOrg } from "@/server/policy/policy";
 import { TableWrap } from "../../_components/TableWrap";
 
 export default function IntegrationsPage() {
@@ -20,6 +21,13 @@ export default function IntegrationsPage() {
 
 async function Integrations() {
   const c = await pageOrg("/settings/integrations");
+  if (!isProOrg(c.org)) {
+    return (
+      <ProGate title="Repositories" rows={5} features={["Dependency scanning", "Patch plans tested in a sandbox", "Changes on a new branch"]}>
+        Connect a repository so fix plans can be tested in a sandbox and, after approval, opened as a change. RuyaShield never pushes to the default branch.
+      </ProGate>
+    );
+  }
   if (grantFor(c.principal.role, "integration.manage") === "N") return <p className="notice warn">Only org admins and security leads can manage repositories.</p>;
   const rows = await listIntegrations(c);
   const active = rows.filter((r) => r.status === "active").length;

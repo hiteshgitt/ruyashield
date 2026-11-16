@@ -7,7 +7,8 @@ import { ActionForm } from "../_components/ActionForm";
 import { StatusBadge } from "../_components/StatusBadge";
 import { decideApprovalAction } from "../actions";
 import { fmt, pageOrg } from "../_lib/page";
-import { Empty, Loading, MetaChips, PageHeader } from "../_components/Page";
+import { Empty, Loading, MetaChips, PageHeader, ProGate } from "../_components/Page";
+import { isProOrg } from "@/server/policy/policy";
 import { TableWrap } from "../_components/TableWrap";
 
 const DECIDE_SHOWN = 20;
@@ -23,6 +24,13 @@ export default function ApprovalsPage() {
 
 async function Approvals() {
   const c = await pageOrg("/approvals");
+  if (!isProOrg(c.org)) {
+    return (
+      <ProGate title="Fix plans and approvals" rows={6} features={["Reviewed fix plans", "Sandbox tests", "Two-person approval", "Change on a new branch"]}>
+        Prepare a fix for a finding, test it in a sandbox, get it approved with MFA, and open it as a change on a new branch. Nothing merges by itself.
+      </ProGate>
+    );
+  }
   const rows = await listApprovals(c);
   const pending = rows.filter((r) => r.approval.state === "pending");
   const done = rows.filter((r) => r.approval.state !== "pending").slice(0, 50);

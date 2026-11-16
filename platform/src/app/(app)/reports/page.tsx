@@ -6,7 +6,7 @@ import { ActionForm } from "../_components/ActionForm";
 import { generateReportAction } from "../actions";
 import { messageFor } from "../_lib/messages";
 import { fmt, pageOrg } from "../_lib/page";
-import { Empty, Loading, MetaChips, PageHeader, ProNotice } from "../_components/Page";
+import { Empty, Loading, MetaChips, PageHeader, ProGate } from "../_components/Page";
 import { isProOrg } from "@/server/policy/policy";
 import { TableWrap } from "../_components/TableWrap";
 
@@ -24,7 +24,11 @@ async function Reports({ searchParams }: { searchParams: PageProps<"/reports">["
   const groupId = typeof sp.clientGroupId === "string" ? sp.clientGroupId : "";
   const c = await pageOrg("/reports");
   if (!isProOrg(c.org)) {
-    return <ProNotice>Generating and downloading reports (PDF and CSV, with SHA-256) is part of RuyaShield Pro. Your security overview stays on the dashboard.</ProNotice>;
+    return (
+      <ProGate title="Reports" rows={6} features={["PDF and CSV", "SHA-256 per file", "Per client group", "Failed checks and limits listed"]}>
+        Generate a stored snapshot of your security overview to send to a client or auditor. Your overview stays on the dashboard.
+      </ProGate>
+    );
   }
   let items;
   try {
