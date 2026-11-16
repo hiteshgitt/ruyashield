@@ -10,7 +10,7 @@
     "migrate": "set -a; [ ! -f .env.local ] || . ./.env.local; set +a; tsx scripts/migrate.mts",
     "worker": "set -a; [ ! -f .env.local ] || . ./.env.local; set +a; tsx scripts/worker.mts",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "test:db": "set -a; [ ! -f .env.local ] || . ./.env.local; set +a; vitest run tests/db",
     "verify-fixproof": "tsx scripts/verify-fixproof.mts",
     "ai:eval": "set -a; [ ! -f .env.local ] || . ./.env.local; set +a; tsx scripts/ai-eval.mts",
