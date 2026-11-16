@@ -46,6 +46,32 @@ export const loginStates = pgTable("login_states", {
   createdAt: ts("created_at").notNull().defaultNow(),
 });
 
+/** Built-in authenticator (0023_totp_mfa.sql). secret is sealed; enabledAt null = enrollment not confirmed. */
+export const userMfa = pgTable("user_mfa", {
+  userId: uuid("user_id").primaryKey(),
+  secret: text("secret").notNull(),
+  enabledAt: ts("enabled_at"),
+  lastStep: bigint("last_step", { mode: "number" }).notNull().default(0),
+  createdAt: ts("created_at").notNull().defaultNow(),
+});
+
+export const mfaRecoveryCodes = pgTable("mfa_recovery_codes", {
+  userId: uuid("user_id").notNull(),
+  codeHash: text("code_hash").notNull(),
+  usedAt: ts("used_at"),
+  createdAt: ts("created_at").notNull().defaultNow(),
+}, (t) => [primaryKey({ columns: [t.userId, t.codeHash] })]);
+
+export const pendingLogins = pgTable("pending_logins", {
+  tokenHash: text("token_hash").primaryKey(),
+  userId: uuid("user_id").notNull(),
+  amr: text("amr").array().notNull().default([]),
+  issuer: text("issuer").notNull(),
+  returnTo: text("return_to").notNull().default("/"),
+  attempts: integer("attempts").notNull().default(0),
+  createdAt: ts("created_at").notNull().defaultNow(),
+});
+
 export const loginAttempts = pgTable("login_attempts", {
   id: bigserial("id", { mode: "number" }).primaryKey(),
   key: text("key").notNull(),

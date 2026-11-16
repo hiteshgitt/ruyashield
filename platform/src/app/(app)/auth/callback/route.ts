@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { completeLogin, LOGIN_STATE_COOKIE, type CallbackInput } from "@/server/auth/login";
+import { PENDING_COOKIE, PENDING_LOGIN_TTL_MS } from "@/server/auth/mfa";
 import { secureCookies, sessionCookieName } from "@/server/auth/session";
 import { isAppError } from "@/server/errors";
 import { log } from "@/server/log";
@@ -17,6 +18,12 @@ function meta(request: NextRequest) {
 async function finish(request: NextRequest, input: CallbackInput) {
   try {
     const s = await completeLogin(input, meta(request));
+    if (s.kind === "mfa") {
+      const res = NextResponse.redirect(publicUrl("/auth/mfa"), 303);
+      res.cookies.set(PENDING_COOKIE, s.pendingToken, { httpOnly: true, sameSite: "lax", secure: secureCookies(), path: "/auth", maxAge: PENDING_LOGIN_TTL_MS / 1000 });
+      res.cookies.delete({ name: LOGIN_STATE_COOKIE, path: "/auth" });
+      return res;
+    }
     const res = NextResponse.redirect(publicUrl(s.returnTo), 303);
     res.cookies.set(sessionCookieName(), s.token, { httpOnly: true, sameSite: "lax", secure: secureCookies(), path: "/", expires: s.expiresAt });
     res.cookies.delete({ name: LOGIN_STATE_COOKIE, path: "/auth" });

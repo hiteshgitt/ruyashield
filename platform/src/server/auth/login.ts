@@ -5,6 +5,7 @@ import { loginAttempts, loginStates, users } from "../db/schema";
 import { audit } from "../audit/audit";
 import { AppError, isUniqueViolation } from "../errors";
 import { createSession, randomToken } from "./session";
+import { createPendingLogin } from "./mfa";
 
 const LOGIN_STATE_TTL_MS = 10 * 60 * 1000;
 const RATE_WINDOW_MS = 15 * 60 * 1000;
@@ -92,7 +93,12 @@ async function recordFailure(keys: string[], meta: RequestMeta, reason: string, 
 }
 
 /** Completes a login and returns a new session token plus the post-login destination. */
-export async function completeLogin(input: CallbackInput, meta: RequestMeta & { browserState?: string | null }): Promise<{ token: string; expiresAt: Date; returnTo: string }> {
+export type LoginResult =
+  | { kind: "session"; token: string; expiresAt: Date; returnTo: string }
+  /** OIDC: identity proven, now the person must enter their authenticator code (see mfa.ts). */
+  | { kind: "mfa"; pendingToken: string };
+
+export async function completeLogin(input: CallbackInput, meta: RequestMeta & { browserState?: string | null }): Promise<LoginResult> {
   const ipKey = meta.ip ? [`ip:${meta.ip}`] : [];
   if (await rateLimited(ipKey)) throw new AppError(429, "rate_limited", "Too many failed sign-in attempts. Try again later.");
 
@@ -126,12 +132,18 @@ export async function completeLogin(input: CallbackInput, meta: RequestMeta & { 
     await recordFailure([...ipKey, acctKey], meta, "user_disabled", id.email);
     throw new AppError(403, "user_disabled", "This account is disabled.");
   }
+  // Real identity providers (Google) do not report 2-step verification, so every OIDC sign-in continues
+  // to RuyaShield's own authenticator-code step; the session is created only after that.
+  if (input.kind === "oidc") {
+    const pendingToken = await createPendingLogin({ userId: user.id, amr: id.amr, issuer: id.issuer, returnTo: ls.returnTo });
+    return { kind: "mfa", pendingToken };
+  }
   const mfa = amrHasMfa(id.amr);
   const s = await createSession({ userId: user.id, mfa, amr: id.amr, authTime: id.authTime, ip: meta.ip, userAgent: meta.userAgent });
   await withOrg(null, (tx) => audit(tx, {
     actor: { type: "user", id: user.id, ip: meta.ip }, action: "auth.login", details: { mfa, amr: id.amr, provider: id.issuer },
   }));
-  return { ...s, returnTo: ls.returnTo };
+  return { kind: "session", ...s, returnTo: ls.returnTo };
 }
 
 function devIdentity(i: Extract<CallbackInput, { kind: "dev" }>): Identity {
