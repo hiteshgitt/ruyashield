@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { cacheLife } from "next/cache";
 import { Logo } from "./Logo";
 
@@ -11,17 +12,17 @@ export function SiteFooter() {
         </div>
         <nav aria-label="Product" className="site-footer-col">
           <h2>Product</h2>
-          <a href="#workflow">Workflow</a>
-          <a href="#zealot">Zealot AI</a>
-          <a href="#fixproof">Remediation &amp; FixProof</a>
-          <a href="#capabilities">Capabilities</a>
+          <Link href="/#workflow">Workflow</Link>
+          <Link href="/#zealot">Zealot AI</Link>
+          <Link href="/#fixproof">Remediation &amp; FixProof</Link>
+          <Link href="/#capabilities">Capabilities</Link>
         </nav>
         <nav aria-label="Who it is for" className="site-footer-col">
           <h2>Who it&apos;s for</h2>
-          <a href="#agencies">Agencies &amp; MSPs</a>
-          <a href="#webmonitor">WebMonitor customers</a>
-          <a href="#pricing">Pricing</a>
-          <a href="#faq">FAQ</a>
+          <Link href="/#agencies">Agencies &amp; MSPs</Link>
+          <Link href="/#webmonitor">WebMonitor customers</Link>
+          <Link href="/#pricing">Pricing</Link>
+          <Link href="/#faq">FAQ</Link>
         </nav>
         <nav aria-label="Account" className="site-footer-col">
           <h2>Account</h2>

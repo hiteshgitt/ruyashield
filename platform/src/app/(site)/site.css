@@ -400,3 +400,50 @@ html.rs-motion:not(.rs-ready) .hero-copy, html.rs-motion:not(.rs-ready) .console
   :is(.caps > li, .plan, .client, .handoff-steps > li, .outcomes > div, .claim)::after { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity .35s var(--ease); background: radial-gradient(18rem circle at var(--sx, 50%) var(--sy, 50%), rgba(139, 92, 246, .14), transparent 70%); }
   :is(.caps > li, .plan, .client, .handoff-steps > li, .outcomes > div, .claim):hover::after { opacity: 1; }
 }
+
+/* ---------- sign in ---------- */
+.signin { position: relative; overflow: hidden; isolation: isolate; min-height: calc(100svh - 4.5rem); display: grid; align-items: center; padding-block: clamp(2.5rem, 6vw, 5.5rem); }
+.signin-glow { position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(40rem 28rem at 78% 30%, rgba(255, 90, 31, .16), transparent 70%),
+    radial-gradient(44rem 32rem at 18% 70%, rgba(139, 92, 246, .22), transparent 70%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%); }
+.signin-glow::after { content: ""; position: absolute; inset: 0; opacity: .35;
+  background-image: linear-gradient(rgba(255, 255, 255, .035) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, .035) 1px, transparent 1px);
+  background-size: 3.5rem 3.5rem; mask-image: radial-gradient(60% 60% at 50% 45%, #000, transparent); }
+.signin-grid { display: grid; gap: clamp(2rem, 4vw, 4.5rem); align-items: center; max-width: 82rem; margin-inline: auto; }
+@media (min-width: 64rem) { .signin-grid { grid-template-columns: minmax(0, 1.1fr) minmax(0, 28rem); } }
+.signin-pitch { display: grid; gap: 1.25rem; align-content: center; }
+.signin-headline { margin: 0; }
+.signin-pitch .lead { margin: 0; }
+.signin-points { list-style: none; margin: .5rem 0 0; padding: 0; display: grid; gap: .75rem; }
+@media (min-width: 48rem) and (max-width: 63.99rem) { .signin-points { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 63.99rem) { .signin-card { order: -1; } }
+.signin-points li { display: flex; gap: .875rem; align-items: flex-start; padding: 1rem 1.125rem; border-radius: var(--radius); background: rgba(255, 255, 255, .025); border: 1px solid var(--line); }
+.signin-points b { display: block; font-weight: 600; color: var(--text); margin-bottom: .25rem; font-family: var(--font-display), var(--font-sans), sans-serif; }
+.signin-points li { align-items: center; }
+.signin-points li > span:last-child { font-size: .875rem; line-height: 1.45; color: var(--text-2); }
+.signin-point-icon { flex: none; display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: .625rem; font-family: var(--font-mono), monospace; font-size: .75rem; color: #fff; background: linear-gradient(135deg, #ff8a1f, #ff4d12 45%, #8b5cf6); }
+.signin-wm { display: flex; align-items: center; gap: .875rem; padding: .875rem 1.125rem; border-radius: var(--radius); border: 1px solid rgba(196, 181, 253, .22); background: linear-gradient(90deg, rgba(139, 92, 246, .1), rgba(255, 90, 31, .06)); color: var(--text-2); font-size: .9375rem; text-decoration: none; justify-self: start; max-width: 40rem; }
+.signin-wm b { color: var(--text); font-weight: 600; }
+.signin-wm:hover { border-color: rgba(196, 181, 253, .45); }
+.signin-wm-dot { flex: none; width: .625rem; height: .625rem; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 4px rgba(74, 222, 128, .15); }
+
+.signin-card { position: relative; display: grid; gap: 1rem; padding: clamp(1.75rem, 2.6vw, 2.5rem); border-radius: 1.5rem;
+  background: linear-gradient(180deg, rgba(30, 26, 47, .92), rgba(17, 15, 27, .96)); border: 1px solid rgba(196, 181, 253, .18);
+  box-shadow: 0 2rem 5rem -2rem rgba(0, 0, 0, .8), 0 0 0 1px rgba(255, 255, 255, .03) inset, 0 0 6rem -2rem rgba(139, 92, 246, .45); backdrop-filter: blur(12px); }
+.signin-card::before { content: ""; position: absolute; inset: 0 0 auto; height: 1px; border-radius: 1.5rem 1.5rem 0 0; background: linear-gradient(90deg, transparent, rgba(255, 138, 31, .7), rgba(196, 181, 253, .7), transparent); }
+.signin-mark { width: 3.5rem; height: 3.5rem; object-fit: contain; filter: drop-shadow(0 .5rem 1.5rem rgba(255, 90, 31, .35)); }
+.signin-title { margin: 0; font-family: var(--font-display), var(--font-sans), sans-serif; font-size: clamp(1.5rem, 1.8vw, 2rem); font-weight: 600; letter-spacing: -.02em; }
+.signin-muted { margin: 0; color: var(--text-2); line-height: 1.55; }
+.signin-strong { color: var(--text); font-weight: 600; }
+.signin-google { display: flex; align-items: center; justify-content: center; gap: .75rem; min-height: 3.25rem; margin-top: .5rem; border-radius: .875rem; background: #fff; color: #1f1f1f; font-weight: 600; font-size: 1rem; text-decoration: none; box-shadow: 0 .75rem 2rem -1rem rgba(255, 255, 255, .5); transition: transform .15s ease, box-shadow .15s ease; }
+.signin-google:hover { transform: translateY(-1px); box-shadow: 0 1rem 2.5rem -1rem rgba(255, 255, 255, .6); }
+.signin-hint { margin: -.25rem 0 0; text-align: center; font-size: .8125rem; color: var(--text-3); }
+.signin-steps { list-style: none; margin: .5rem 0 0; padding: 1rem 0 0; border-top: 1px solid var(--line); display: grid; gap: .625rem; }
+.signin-steps li { display: flex; align-items: center; gap: .75rem; font-size: .9375rem; color: var(--text-2); }
+.signin-steps span { flex: none; display: grid; place-items: center; width: 1.625rem; height: 1.625rem; border-radius: 50%; font-family: var(--font-mono), monospace; font-size: .75rem; color: var(--violet-3); border: 1px solid rgba(196, 181, 253, .35); }
+.signin-foot { margin: 0; font-size: .8125rem; color: var(--text-3); }
+.signin-status { margin: 0; padding: .625rem .875rem; border-radius: .75rem; font-size: .875rem; color: var(--green); background: rgba(74, 222, 128, .08); border: 1px solid rgba(74, 222, 128, .25); }
+.signin-actions { display: flex; flex-wrap: wrap; gap: .625rem; }
+.signin-actions form { margin: 0; }

@@ -4,12 +4,13 @@ import { getContext } from "@/server/context";
 import { Logo } from "./Logo";
 
 const LINKS = [
-  ["#workflow", "Workflow"],
-  ["#zealot", "Zealot AI"],
-  ["#fixproof", "FixProof"],
-  ["#agencies", "Agencies"],
-  ["#pricing", "Pricing"],
-  ["#faq", "FAQ"],
+  ["/#workflow", "Workflow"],
+  ["/#zealot", "Zealot AI"],
+  ["/#fixproof", "FixProof"],
+  ["/#agencies", "Agencies"],
+  ["/#webmonitor", "WebMonitor"],
+  ["/#pricing", "Pricing"],
+  ["/#faq", "FAQ"],
 ] as const;
 
 export function SiteHeader() {
