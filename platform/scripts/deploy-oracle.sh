@@ -43,7 +43,8 @@ tar -xzf "/tmp/ruyashield-$SHA.tar.gz" -C "$STAGE" && rm -f "/tmp/ruyashield-$SH
 echo "$SHA" > "$STAGE/REVISION"
 chown -R ruya:ruya "$STAGE"
 STAGE_OR_APP=$STAGE
-as_ruya env HOME=$BASE npm ci --no-audit --no-fund --loglevel=error
+# NODE_ENV=production (from the env file) would skip devDependencies, which the build and the worker (tsx) need.
+as_ruya env HOME=$BASE npm ci --include=dev --no-audit --no-fund --loglevel=error
 as_ruya env HOME=$BASE NEXT_TELEMETRY_DISABLED=1 node node_modules/next/dist/bin/next build > "$STAGE/build.log" 2>&1 \
   || { tail -40 "$STAGE/build.log"; echo "Build failed; the live site was not touched." >&2; exit 1; }
 
