@@ -1,12 +1,13 @@
 import { Suspense } from "react";
 import { cookies } from "next/headers";
 import { connection } from "next/server";
+import { redirect } from "next/navigation";
 import { getSession } from "@/server/context";
-import { challengeFor, PENDING_COOKIE } from "@/server/auth/mfa";
+import { challengeFor, PENDING_COOKIE, pendingReveal } from "@/server/auth/mfa";
 import { safeReturnTo } from "@/server/auth/login";
 import { Loading, PageHeader } from "../../_components/Page";
 import { MfaForm } from "./MfaForm";
-import { verifyLoginCode, verifyStepUpCode } from "./actions";
+import { confirmRecoverySaved, verifyLoginCode, verifyStepUpCode } from "./actions";
 
 export default function MfaPage({ searchParams }: PageProps<"/auth/mfa">) {
   return (
@@ -35,7 +36,26 @@ async function Body({ searchParams }: { searchParams: PageProps<"/auth/mfa">["se
   }
 
   const challenge = await challengeFor((await cookies()).get(PENDING_COOKIE)?.value);
-  if (!challenge) return <Expired />;
+  if (!challenge) {
+    const session = await getSession();
+    if (!session) return <Expired />;
+    const reveal = await pendingReveal(session.userId);
+    // Already signed in and nothing left to show: this page has no job.
+    if (!reveal) redirect("/");
+    return (
+      <>
+        <PageHeader title="Save your recovery codes" lead="Two-step verification is on." />
+        <div className="stack">
+          <p>
+            Each code signs you in once if you lose your phone. Keep them somewhere safe, such as a password manager.{" "}
+            <strong>They are shown only now.</strong>
+          </p>
+          <pre style={{ userSelect: "all", columns: 2, padding: "12px 16px" }}>{reveal.codes.join("\n")}</pre>
+          <form action={confirmRecoverySaved}><button type="submit">I have saved them, continue</button></form>
+        </div>
+      </>
+    );
+  }
 
   if (challenge.kind === "verify") {
     return (

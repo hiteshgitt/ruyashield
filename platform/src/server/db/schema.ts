@@ -62,6 +62,14 @@ export const mfaRecoveryCodes = pgTable("mfa_recovery_codes", {
   createdAt: ts("created_at").notNull().defaultNow(),
 }, (t) => [primaryKey({ columns: [t.userId, t.codeHash] })]);
 
+/** Recovery codes waiting to be shown once (0024). codes is sealed JSON. */
+export const mfaRecoveryReveals = pgTable("mfa_recovery_reveals", {
+  userId: uuid("user_id").primaryKey(),
+  codes: text("codes").notNull(),
+  returnTo: text("return_to").notNull().default("/"),
+  createdAt: ts("created_at").notNull().defaultNow(),
+});
+
 export const pendingLogins = pgTable("pending_logins", {
   tokenHash: text("token_hash").primaryKey(),
   userId: uuid("user_id").notNull(),

@@ -2,7 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { and, count, eq, gt, isNull, lt, sql } from "drizzle-orm";
 import QRCode from "qrcode";
 import { db, withOrg } from "../db/client";
-import { loginAttempts, mfaRecoveryCodes, pendingLogins, sessions, userMfa, users } from "../db/schema";
+import { loginAttempts, mfaRecoveryCodes, mfaRecoveryReveals, pendingLogins, sessions, userMfa, users } from "../db/schema";
 import { audit } from "../audit/audit";
 import { AppError } from "../errors";
 import { open, seal } from "../attacks/secretbox";
@@ -16,6 +16,7 @@ export const PENDING_LOGIN_TTL_MS = 10 * 60 * 1000;
 export const PENDING_COOKIE = "ruya_mfa_pending";
 export const PENDING_MAX_ATTEMPTS = 5;
 export const RECOVERY_CODE_COUNT = 10;
+export const REVEAL_TTL_MS = 15 * 60 * 1000;
 const MFA_RATE_WINDOW_MS = 15 * 60 * 1000;
 const MFA_RATE_MAX = 10;
 
@@ -118,7 +119,7 @@ export async function regenerateRecoveryCodes(userId: string): Promise<string[]>
   return codes.map((c) => `${c.slice(0, 5)}-${c.slice(5)}`);
 }
 
-export type MfaLoginResult = { token: string; expiresAt: Date; returnTo: string; recoveryCodes: string[] | null; usedRecovery: boolean };
+export type MfaLoginResult = { token: string; expiresAt: Date; returnTo: string; enrolled: boolean; usedRecovery: boolean };
 
 /** Finishes a pending login with a code. First-time users confirm enrollment and get their recovery codes. */
 export async function completeMfaLogin(pendingToken: string | undefined | null, code: string, meta: RequestMeta): Promise<MfaLoginResult> {
@@ -143,10 +144,9 @@ export async function completeMfaLogin(pendingToken: string | undefined | null, 
   const claimed = await db.delete(pendingLogins).where(eq(pendingLogins.tokenHash, p.tokenHash)).returning({ t: pendingLogins.tokenHash });
   if (!claimed.length) throw new AppError(410, "mfa_login_expired", "This sign-in has expired. Please sign in again.");
 
-  let recoveryCodes: string[] | null = null;
   if (!wasEnrolled) {
     await db.update(userMfa).set({ enabledAt: new Date() }).where(eq(userMfa.userId, p.userId));
-    recoveryCodes = await regenerateRecoveryCodes(p.userId);
+    await issueRecoveryReveal(p.userId, p.returnTo);
   }
   const amr = [...new Set([...p.amr, ...MFA_AMR])];
   const s = await createSession({ userId: p.userId, mfa: true, amr, authTime: new Date(), ip: meta.ip, userAgent: meta.userAgent });
@@ -154,7 +154,7 @@ export async function completeMfaLogin(pendingToken: string | undefined | null, 
     if (!wasEnrolled) await audit(tx, { actor: { type: "user", id: p.userId, ip: meta.ip }, action: "auth.mfa_enrolled" });
     await audit(tx, { actor: { type: "user", id: p.userId, ip: meta.ip }, action: "auth.login", details: { mfa: true, amr, provider: p.issuer, method: how } });
   });
-  return { ...s, returnTo: p.returnTo, recoveryCodes, usedRecovery: how === "recovery" };
+  return { ...s, returnTo: p.returnTo, enrolled: !wasEnrolled, usedRecovery: how === "recovery" };
 }
 
 /** Step-up for sensitive actions: a fresh code renews the session's authentication time. */
@@ -174,4 +174,37 @@ export async function stepUp(session: SessionInfo, code: string, meta: RequestMe
 export async function remainingRecoveryCodes(userId: string): Promise<number> {
   const [r] = await db.select({ n: count() }).from(mfaRecoveryCodes).where(and(eq(mfaRecoveryCodes.userId, userId), isNull(mfaRecoveryCodes.usedAt)));
   return r?.n ?? 0;
+}
+
+// ---------- one-time display of new recovery codes ----------
+
+/** Makes new recovery codes and keeps them (sealed) until the user has seen them once. */
+export async function issueRecoveryReveal(userId: string, returnTo = "/"): Promise<void> {
+  const codes = await regenerateRecoveryCodes(userId);
+  const sealed = seal(JSON.stringify(codes), `mfa_reveal:${userId}`);
+  await db.insert(mfaRecoveryReveals).values({ userId, codes: sealed, returnTo })
+    .onConflictDoUpdate({ target: mfaRecoveryReveals.userId, set: { codes: sealed, returnTo, createdAt: new Date() } });
+}
+
+export async function pendingReveal(userId: string): Promise<{ codes: string[]; returnTo: string } | null> {
+  const r = (await db.select().from(mfaRecoveryReveals).where(and(
+    eq(mfaRecoveryReveals.userId, userId), gt(mfaRecoveryReveals.createdAt, new Date(Date.now() - REVEAL_TTL_MS)),
+  )))[0];
+  if (!r) return null;
+  return { codes: JSON.parse(open(r.codes, `mfa_reveal:${userId}`)) as string[], returnTo: r.returnTo };
+}
+
+export async function dismissReveal(userId: string): Promise<string> {
+  const r = (await db.delete(mfaRecoveryReveals).where(eq(mfaRecoveryReveals.userId, userId)).returning({ returnTo: mfaRecoveryReveals.returnTo }))[0];
+  return r?.returnTo ?? "/";
+}
+
+/** Operator tool (scripts/mfa-admin.mts): lost phone. The user enrolls again at their next sign-in. */
+export async function resetMfa(userId: string): Promise<void> {
+  await db.transaction(async (tx) => {
+    await tx.delete(userMfa).where(eq(userMfa.userId, userId));
+    await tx.delete(mfaRecoveryCodes).where(eq(mfaRecoveryCodes.userId, userId));
+    await tx.delete(mfaRecoveryReveals).where(eq(mfaRecoveryReveals.userId, userId));
+    await tx.update(sessions).set({ revokedAt: new Date() }).where(and(eq(sessions.userId, userId), isNull(sessions.revokedAt)));
+  });
 }

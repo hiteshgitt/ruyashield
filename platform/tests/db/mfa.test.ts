@@ -6,7 +6,7 @@ import { mfaRecoveryCodes, pendingLogins, sessions, userMfa, users } from "@/ser
 import { open } from "@/server/attacks/secretbox";
 import { readSession } from "@/server/auth/session";
 import { codeAt, stepAt } from "@/server/auth/totp";
-import { challengeFor, completeMfaLogin, createPendingLogin, PENDING_MAX_ATTEMPTS, remainingRecoveryCodes, stepUp } from "@/server/auth/mfa";
+import { challengeFor, completeMfaLogin, createPendingLogin, dismissReveal, issueRecoveryReveal, PENDING_MAX_ATTEMPTS, pendingReveal, remainingRecoveryCodes, resetMfa, stepUp } from "@/server/auth/mfa";
 
 // Needs a migrated database reachable as the runtime role. Skipped otherwise.
 const run = process.env.DATABASE_URL ? describe : describe.skip;
@@ -39,9 +39,15 @@ run("built-in MFA after Google sign-in (database)", () => {
     expect(row.secret).not.toContain((c1 as { secret: string }).secret);
 
     const r = await completeMfaLogin(token, freshCode(await secretOf(u.id)), meta);
-    expect(r.returnTo).toBe("/dashboard");
-    expect(r.recoveryCodes).toHaveLength(10);
-    expect(r.recoveryCodes![0]).toMatch(/^[A-Z2-7]{5}-[A-Z2-7]{5}$/);
+    expect(r).toMatchObject({ returnTo: "/dashboard", enrolled: true });
+    // The codes wait on the server (sealed) until shown, so a page reload cannot lose them.
+    const reveal = await pendingReveal(u.id);
+    expect(reveal?.codes).toHaveLength(10);
+    expect(reveal?.codes[0]).toMatch(/^[A-Z2-7]{5}-[A-Z2-7]{5}$/);
+    expect(await pendingReveal(u.id)).toEqual(reveal);
+    expect(await dismissReveal(u.id)).toBe("/dashboard");
+    expect(await pendingReveal(u.id)).toBeNull();
+    const recoveryCodes = reveal!.codes;
     const s = await readSession(r.token);
     expect(s).toMatchObject({ userId: u.id, mfa: true });
     expect(s!.amr).toEqual(expect.arrayContaining(["otp", "mfa"]));
@@ -49,7 +55,7 @@ run("built-in MFA after Google sign-in (database)", () => {
     await expect(completeMfaLogin(token, "000000", meta)).rejects.toMatchObject({ code: "mfa_login_expired" });
     // Only hashes are stored.
     const hashes = await db.select().from(mfaRecoveryCodes).where(eq(mfaRecoveryCodes.userId, u.id));
-    expect(JSON.stringify(hashes)).not.toContain(r.recoveryCodes![0].replace("-", ""));
+    expect(JSON.stringify(hashes)).not.toContain(recoveryCodes[0].replace("-", ""));
   });
 
   it("asks enrolled users for a code, refuses replays, and accepts each recovery code once", async () => {
@@ -59,19 +65,36 @@ run("built-in MFA after Google sign-in (database)", () => {
     const t0 = await pending(u.id);
     await challengeFor(t0);
     const secret = await secretOf(u.id);
-    const { recoveryCodes } = await completeMfaLogin(t0, freshCode(secret), meta);
+    await completeMfaLogin(t0, freshCode(secret), meta);
+    const recoveryCodes = (await pendingReveal(u.id))!.codes;
 
     const t1 = await pending(u.id);
     expect((await challengeFor(t1))?.kind).toBe("verify");
     // The code just used cannot be used again.
     await expect(completeMfaLogin(t1, freshCode(secret), meta)).rejects.toMatchObject({ code: "mfa_code_invalid" });
-    expect((await completeMfaLogin(t1, freshCode(secret, 1), meta)).recoveryCodes).toBeNull();
+    expect((await completeMfaLogin(t1, freshCode(secret, 1), meta)).enrolled).toBe(false);
 
     const t2 = await pending(u.id);
     const viaRecovery = await completeMfaLogin(t2, recoveryCodes![3].toLowerCase(), meta);
     expect(viaRecovery.usedRecovery).toBe(true);
     expect(await remainingRecoveryCodes(u.id)).toBe(9);
     await expect(completeMfaLogin(await pending(u.id), recoveryCodes![3], meta)).rejects.toMatchObject({ code: "mfa_code_invalid" });
+  });
+
+  it("operator tools: new recovery codes replace the old ones; reset forces re-enrollment and signs out", async () => {
+    const u = await newUser();
+    const t = await pending(u.id);
+    await challengeFor(t);
+    const r = await completeMfaLogin(t, freshCode(await secretOf(u.id)), meta);
+    const first = (await pendingReveal(u.id))!.codes;
+    await issueRecoveryReveal(u.id);
+    const second = (await pendingReveal(u.id))!.codes;
+    expect(second).not.toEqual(first);
+    await expect(completeMfaLogin(await pending(u.id), first[0], meta)).rejects.toMatchObject({ code: "mfa_code_invalid" });
+
+    await resetMfa(u.id);
+    expect(await readSession(r.token)).toBeNull();
+    expect((await challengeFor(await pending(u.id)))?.kind).toBe("enroll");
   });
 
   it("ends a pending login after too many wrong codes", async () => {
