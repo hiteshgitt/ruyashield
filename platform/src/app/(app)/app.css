@@ -832,3 +832,7 @@ html:has(.app) body { background: #0b0a10; color: #ecebf3; margin: 0; }
   .app .stepper li.current .stepper-dot { animation: app-pop .5s var(--ease) both .25s; }
   .app .role-card { animation: app-rise .4s var(--ease) both .1s; }
 }
+
+.app .signin-card { max-width: 30rem; margin: 2rem auto; }
+.app .signin-google { align-self: flex-start; }
+.app .signin-notes { margin: 0; padding-left: 1.1rem; display: grid; gap: .35rem; }

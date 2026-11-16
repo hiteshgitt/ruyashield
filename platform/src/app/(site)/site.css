@@ -95,6 +95,7 @@ html:has([data-site="marketing"]) body { background: #07060c; color: #ecebf3; fo
 .btn-primary { background: linear-gradient(180deg, var(--btn-top), var(--btn-bottom)); color: #fff; box-shadow: 0 0 0 1px rgba(196, 181, 253, .35) inset, 0 .5rem 2rem -.75rem var(--violet-glow); }
 .btn-primary:hover { box-shadow: 0 0 0 1px rgba(196, 181, 253, .55) inset, 0 .75rem 2.5rem -.75rem rgba(139, 92, 246, .6); }
 .btn-ghost { border: 1px solid var(--line-2); color: var(--text); background: rgba(255, 255, 255, .02); }
+.account-cta { display: inline-flex; flex-wrap: wrap; gap: .5rem; }
 .btn-ghost:hover { border-color: rgba(196, 181, 253, .45); background: rgba(139, 92, 246, .08); }
 
 /* "Illustrative" tag: every mock UI carries one so nothing reads as live data. */

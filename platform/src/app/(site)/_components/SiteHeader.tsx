@@ -21,7 +21,7 @@ export function SiteHeader() {
           {LINKS.map(([href, label]) => <a key={href} href={href}>{label}</a>)}
         </nav>
         <div className="site-header-cta">
-          <Suspense fallback={<a className="btn btn-primary btn-sm" href="/auth/login">Sign in</a>}>
+          <Suspense fallback={<a className="btn btn-primary btn-sm" href="/auth/signin">Sign in</a>}>
             <AccountCta size="sm" />
           </Suspense>
         </div>
@@ -29,6 +29,8 @@ export function SiteHeader() {
           <summary aria-label="Menu"><span className="site-menu-icon" aria-hidden="true" /><span className="site-menu-label">Menu</span></summary>
           <nav aria-label="Mobile" className="site-menu-panel">
             {LINKS.map(([href, label]) => <a key={href} href={href}>{label}</a>)}
+            <a href="/auth/signin">Sign in</a>
+            <a href="/auth/signin?new=1">Create account</a>
           </nav>
         </details>
       </div>
@@ -44,6 +46,13 @@ export function SiteHeader() {
 export async function AccountCta({ size }: { size?: "sm" | "lg" }) {
   const c = await getContext();
   const cls = `btn btn-primary${size ? ` btn-${size}` : ""}`;
-  if (!c) return <a className={cls} href="/auth/login">Sign in to get started</a>;
+  if (!c) {
+    return (
+      <span className="account-cta">
+        <a className={`btn btn-ghost${size ? ` btn-${size}` : ""}`} href="/auth/signin">Sign in</a>
+        <a className={cls} href="/auth/signin?new=1">Create account</a>
+      </span>
+    );
+  }
   return <Link className={cls} href={c.ctx ? "/assets" : "/orgs"}>{c.ctx ? `Continue to ${c.ctx.org.name}` : "Choose or create an organization"} <span aria-hidden="true">→</span></Link>;
 }

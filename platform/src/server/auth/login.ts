@@ -64,7 +64,9 @@ export async function startLogin(opts: { returnTo?: string; stepUp?: boolean }):
     redirect_uri: callbackUrl(), scope: "openid email profile", state, nonce,
     code_challenge: await oidc.calculatePKCECodeChallenge(codeVerifier), code_challenge_method: "S256",
   };
-  if (opts.stepUp) Object.assign(params, { prompt: "login", max_age: "0" });
+  // Always show the provider's account chooser, so after signing out a different (or new) account can be used
+  // instead of silently reusing the one the browser is signed in to.
+  Object.assign(params, opts.stepUp ? { prompt: "login", max_age: "0" } : { prompt: "select_account" });
   return { url: oidc.buildAuthorizationUrl(config, params).toString(), state };
 }
 

@@ -7,7 +7,7 @@ export default function AuthErrorPage({ searchParams }: PageProps<"/auth/error">
     <div className="card" style={{ maxWidth: 480 }}>
       <PageHeader title="Sign-in problem" />
       <Suspense fallback={null}><Message searchParams={searchParams} /></Suspense>
-      <p><a href="/auth/login">Try signing in again</a></p>
+      <p><a href="/auth/signin">Try signing in again</a></p>
     </div>
   );
 }

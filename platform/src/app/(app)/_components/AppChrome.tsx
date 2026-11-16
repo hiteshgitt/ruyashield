@@ -19,7 +19,7 @@ export async function AppChrome() {
     return (
       <header className="topbar">
         <Link href="/" className="brand">RuyaShield</Link>
-        <div className="topbar-end"><Link href="/auth/login" className="button secondary">Sign in</Link></div>
+        <div className="topbar-end"><Link href="/auth/signin" className="button secondary">Sign in</Link><Link href="/auth/signin?new=1" className="button">Create account</Link></div>
       </header>
     );
   }

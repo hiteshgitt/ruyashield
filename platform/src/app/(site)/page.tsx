@@ -11,7 +11,7 @@ import { SiteMotion } from "./_components/SiteMotion";
 
 function Cta({ size = "lg" }: { size?: "sm" | "lg" }) {
   return (
-    <Suspense fallback={<a className={`btn btn-primary btn-${size}`} href="/auth/login">Sign in to get started</a>}>
+    <Suspense fallback={<a className={`btn btn-primary btn-${size}`} href="/auth/signin?new=1">Create account</a>}>
       <AccountCta size={size} />
     </Suspense>
   );

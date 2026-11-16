@@ -40,7 +40,7 @@ export async function logoutAction() {
   if (token) await revokeSessionByToken(token);
   if (s) await auditLogout(s.userId, (await requestMeta()).ip);
   jar.set(name, "", { maxAge: 0, path: "/", secure: secureCookies(), httpOnly: true, sameSite: "lax" });
-  redirect("/");
+  redirect("/auth/signin?signedOut=1");
 }
 
 export async function selectOrgAction(f: FormData) {
