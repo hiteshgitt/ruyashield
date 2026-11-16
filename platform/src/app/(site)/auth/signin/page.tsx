@@ -76,6 +76,8 @@ async function Card({ searchParams }: { searchParams: PageProps<"/auth/signin">[
       {sp.signedOut === "1" && <p className="signin-status" role="status">You are signed out.</p>}
       {sp.verified === "1" && <p className="signin-status" role="status">Email verified. Sign in to continue.</p>}
       {sp.reset === "1" && <p className="signin-status" role="status">Password changed. Sign in with your new password.</p>}
+      {sp.mfaReset === "1" && <p className="signin-status" role="status">Authenticator reset. Sign in and scan the new QR code with the app on your new phone.</p>}
+      {sp.deleted === "1" && <p className="signin-status" role="status">Your account has been deleted.</p>}
       {sp.sent === "verify" && (
         <p className="signin-status" role="status">Check your inbox{email ? <> at <b>{email}</b></> : ""}. We sent a link to verify your email; it works for 24 hours.</p>
       )}

@@ -883,3 +883,40 @@ html:has(.app) body { background: #0b0a10; color: #ecebf3; margin: 0; }
 .app .plan-yes { color: var(--ok); font-weight: 700; }
 .app .plan-no { color: var(--text-3, #8f8ba5); }
 .app .nav-pro { margin-left: auto; padding: .1rem .45rem; border-radius: 999px; font-size: .625rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #fff; background: linear-gradient(135deg, #ff8a1f, #ff4d12); }
+
+/* ---------- account ---------- */
+.app .account { display: grid; gap: 1.5rem; }
+.app .account-hero { display: flex; flex-wrap: wrap; align-items: center; gap: 1.25rem 1.5rem; padding: 1.75rem 2rem; border-color: color-mix(in srgb, #8b5cf6 30%, var(--line-2));
+  background: radial-gradient(90% 140% at 100% 0%, color-mix(in srgb, #ff5a1f 12%, transparent), transparent 60%), radial-gradient(80% 120% at 0% 100%, color-mix(in srgb, #8b5cf6 16%, transparent), transparent 60%), var(--surface, #110f1b); }
+.app .account-avatar { display: grid; place-items: center; width: 4.5rem; height: 4.5rem; border-radius: 1.25rem; font-size: 1.5rem; font-weight: 700; color: #fff; background: linear-gradient(135deg, #ff8a1f, #ff4d12 45%, #8b5cf6); box-shadow: 0 1rem 2.5rem -1rem rgba(255, 90, 31, .6); }
+.app .account-hero-text { flex: 1 1 18rem; min-width: 0; }
+.app .account-hero-text h2 { margin: 0; font-size: 1.5rem; }
+.app .account-hero-text > p { margin: .25rem 0 0; }
+.app .account-chips { list-style: none; margin: .875rem 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: .5rem; }
+.app .account-chips li { padding: .3rem .75rem; border-radius: 999px; font-size: .75rem; color: var(--text-2); background: rgba(255, 255, 255, .05); border: 1px solid var(--line-2); }
+.app .account-chips li.ok { color: var(--ok); border-color: var(--ok-line); background: var(--ok-bg); }
+.app .account-chips li.warn { color: var(--warn); border-color: var(--warn-line); background: var(--warn-bg); }
+.app .account-grid { display: grid; gap: 1.5rem; }
+@media (min-width: 64rem) { .app .account-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.app .account-card { display: grid; gap: .875rem; align-content: start; padding: 1.5rem 1.75rem; }
+.app .account-card h3 { margin: 0; font-size: 1.0625rem; }
+.app .account-card > p { margin: 0; }
+.app .account-card-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; }
+.app .account-sub { display: grid; gap: .5rem; padding-top: .875rem; border-top: 1px solid var(--line); }
+.app .account-sub h4 { margin: 0; font-size: .9375rem; }
+.app .account-sub p { margin: 0; }
+.app .account-sessions, .app .account-orgs { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
+.app .account-sessions li, .app .account-orgs li { display: flex; align-items: center; gap: .875rem; padding: .75rem .875rem; border-radius: .875rem; border: 1px solid var(--line); background: rgba(255, 255, 255, .02); }
+.app .account-session-text { flex: 1; min-width: 0; display: grid; gap: .125rem; }
+.app .account-session-text b { display: inline-flex; align-items: center; gap: .5rem; font-weight: 600; }
+.app .account-dot { flex: none; width: .625rem; height: .625rem; border-radius: 50%; background: var(--text-3, #8f8ba5); }
+.app .account-dot.current { background: var(--ok); box-shadow: 0 0 0 4px var(--ok-bg); }
+.app .account-sessions form, .app .account-orgs form { margin: 0; }
+.app .account-danger { border-color: color-mix(in srgb, var(--bad) 35%, var(--line-2)); }
+@media (min-width: 64rem) { .app .account-danger { grid-column: 1 / -1; } }
+.app .menu-links { display: grid; gap: .125rem; padding: .375rem 0; margin: .375rem 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.app .menu-plan { margin-left: auto; padding: .1rem .5rem; border-radius: 999px; font-size: .6875rem; font-weight: 700; color: var(--text-2); border: 1px solid var(--line-2); }
+.app .menu-plan.pro { color: #fff; border-color: transparent; background: linear-gradient(135deg, #ff8a1f, #ff4d12); }
+.app .account-row-title { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.app .account-row-title .badge { width: auto; }
+.app .account-card .inline-form input { flex: 1 1 10rem; min-width: 0; }

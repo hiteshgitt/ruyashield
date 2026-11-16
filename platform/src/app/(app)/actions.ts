@@ -26,6 +26,7 @@ import * as tokenSvc from "@/server/tokens/tokens";
 import { createWebMonitorToken } from "@/server/webmonitor/watch";
 import * as breakGlassSvc from "@/server/operator/breakglass";
 import * as orgPlanSvc from "@/server/operator/plans";
+import * as accountSvc from "@/server/account/account";
 import { allowPrivateFromEnv } from "@/server/net/egress";
 import { AppError } from "@/server/errors";
 import { run, str, type ActionState } from "./_lib/action";
@@ -642,4 +643,76 @@ export async function disableAttackSourceAction(_: ActionState, f: FormData): Pr
     await attackSvc.disableSource(await requireOrgContext(), str(f, "sourceId"));
     return { ok: "Source disabled. Its stored credential no longer works; events already recorded stay until the 90-day purge.", tone: "warn" };
   });
+}
+
+// ---------- account (the signed-in person's own settings) ----------
+
+async function clearSessionCookie() {
+  const jar = await cookies();
+  jar.set(sessionCookieName(), "", { maxAge: 0, path: "/", secure: secureCookies(), httpOnly: true, sameSite: "lax" });
+}
+
+export async function updateProfileAction(_: ActionState, f: FormData): Promise<ActionState> {
+  return run(async () => {
+    await accountSvc.updateProfile(await requireSession(), { displayName: str(f, "displayName") }, await requestMeta());
+    return { ok: "Name saved." };
+  });
+}
+
+export async function changePasswordAction(_: ActionState, f: FormData): Promise<ActionState> {
+  return run(async () => {
+    if (str(f, "next") !== str(f, "confirm")) throw new AppError(422, "validation_failed", "The two new passwords do not match.");
+    await accountSvc.changePassword(await requireSession(), { current: str(f, "current"), next: str(f, "next") }, await requestMeta());
+    return { ok: "Password changed. Other devices were signed out." };
+  });
+}
+
+export async function newRecoveryCodesAction(_: ActionState, f: FormData): Promise<ActionState> {
+  let done = false;
+  const r = await run(async () => {
+    await accountSvc.newRecoveryCodes(await requireSession(), str(f, "code"), await requestMeta());
+    done = true;
+  });
+  if (done) redirect("/auth/mfa");
+  return r;
+}
+
+export async function resetAuthenticatorAction(_: ActionState, f: FormData): Promise<ActionState> {
+  let done = false;
+  const r = await run(async () => {
+    await accountSvc.resetAuthenticator(await requireSession(), str(f, "code"), await requestMeta());
+    done = true;
+  });
+  if (done) {
+    await clearSessionCookie();
+    redirect("/auth/signin?mfaReset=1");
+  }
+  return r;
+}
+
+export async function signOutSessionAction(_: ActionState, f: FormData): Promise<ActionState> {
+  return run(async () => {
+    await accountSvc.signOutSession(await requireSession(), str(f, "key"), await requestMeta());
+    return { ok: "Signed out of that device." };
+  });
+}
+
+export async function signOutOtherSessionsAction(): Promise<ActionState> {
+  return run(async () => {
+    const n = await accountSvc.signOutOtherSessions(await requireSession(), await requestMeta());
+    return { ok: n ? `Signed out of ${n} other device${n === 1 ? "" : "s"}.` : "No other devices were signed in." };
+  });
+}
+
+export async function deleteAccountAction(_: ActionState, f: FormData): Promise<ActionState> {
+  let done = false;
+  const r = await run(async () => {
+    await accountSvc.deleteAccount(await requireSession(), { confirm: str(f, "confirm"), code: str(f, "code") }, await requestMeta());
+    done = true;
+  });
+  if (done) {
+    await clearSessionCookie();
+    redirect("/auth/signin?deleted=1");
+  }
+  return r;
 }

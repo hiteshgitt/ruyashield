@@ -141,6 +141,15 @@ export async function AppChrome() {
               <p className="small">{c.session.mfa
                 ? <span className="badge ok">MFA on</span>
                 : <span className="badge warn">No MFA on this session</span>}</p>
+              <div className="menu-links">
+                <Link href="/account" className="menu-item"><Icon name="members" />Account settings</Link>
+                <Link href="/account#acc-sessions" className="menu-item"><Icon name="tokens" />Devices and security</Link>
+                {c.ctx && !breakGlass && <Link href="/notifications" className="menu-item"><Icon name="bell" />Notification preferences</Link>}
+                {c.ctx && !breakGlass && (
+                  <Link href="/settings/plan" className="menu-item"><Icon name="shield" />Plan<span className={`menu-plan${c.ctx.org.plan === "pro" ? " pro" : ""}`}>{c.ctx.org.plan === "pro" ? "Pro" : "Free"}</span></Link>
+                )}
+                <Link href="/orgs" className="menu-item"><Icon name="org" />Switch organization</Link>
+              </div>
               <form action={logoutAction}><button type="submit" className="menu-item"><Icon name="logout" />Sign out</button></form>
             </div>
           </details>
