@@ -45,6 +45,11 @@ async function Referral({ params }: { params: PageProps<"/referrals/[token]">["p
           : <div className="notice warn">This site is not an asset of this organization. <Link href="/assets">Add and verify it</Link> before an assessment can run.</div>}
       </div>
 
+      {r.status === "consented" && mayDecide && (
+        r.assetId && r.assetVerified
+          ? <p><Link className="button" href={`/assets/${r.assetId}?referral=${r.id}`}>Launch assessment</Link></p>
+          : <p className="notice warn">Consent recorded. Add <strong>{r.host}</strong> as an asset and verify ownership, then launch the assessment from the asset page.</p>
+      )}
       {r.status !== "pending_consent" ? <p className="muted small">This referral is {r.status.replace(/_/g, " ")}; the link cannot be used again.</p>
         : !mayDecide ? <p className="muted">Your role cannot decide referrals. Ask an org admin or security lead.</p>
         : (

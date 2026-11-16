@@ -155,6 +155,7 @@ export async function launchAssessmentAction(_: ActionState, f: FormData): Promi
       assetId: str(f, "assetId"), idempotencyKey: str(f, "idempotencyKey"),
       checkIds: f.getAll("checkIds").map(String),
       basePaths: lines("basePaths"), excludedPaths: lines("excludedPaths"),
+      referralId: str(f, "referralId") || undefined,
     });
     id = out.assessment.id;
   });
@@ -490,7 +491,7 @@ export async function decideReferralAction(_: ActionState, f: FormData): Promise
     const r = await referralSvc.decideReferral(await requireOrgContext(), str(f, "token"), {
       decision, textVersion: str(f, "textVersion"), acceptCharges: f.get("acceptCharges") === "on", shareStatus: f.get("shareStatus") === "on",
     });
-    if (r.status === "consented") return { ok: "Consent recorded. Nothing has been scanned; launch an assessment from the asset page when you are ready." };
+    if (r.status === "consented") return { ok: "Consent recorded. Nothing has been scanned yet: launch the assessment below when you are ready." };
     return { ok: r.status === "declined" ? "Referral declined." : "Referral deleted.", tone: "warn" };
   });
 }

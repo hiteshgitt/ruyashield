@@ -18,17 +18,20 @@ import { TableWrap } from "../../_components/TableWrap";
 const METHOD_LABEL: Record<string, string> = { dns_txt: "DNS TXT record", http_file: "File at /.well-known/", meta_tag: "HTML meta tag on the home page" };
 const CLASS_LABEL: Record<string, string> = { P: "passive", A1: "safe active", A2: "intrusive", X: "destructive" };
 
-export default function AssetPage({ params }: PageProps<"/assets/[id]">) {
+export default function AssetPage({ params, searchParams }: PageProps<"/assets/[id]">) {
   return (
     <>
       <p className="small crumb"><Link href="/assets">← Assets</Link></p>
-      <Suspense fallback={<Loading />}><Asset params={params} /></Suspense>
+      <Suspense fallback={<Loading />}><Asset params={params} searchParams={searchParams} /></Suspense>
     </>
   );
 }
 
-async function Asset({ params }: { params: PageProps<"/assets/[id]">["params"] }) {
+async function Asset({ params, searchParams }: { params: PageProps<"/assets/[id]">["params"]; searchParams: PageProps<"/assets/[id]">["searchParams"] }) {
   const { id } = await params;
+  // ?referral=<id> from a consented WebMonitor referral: the launch is linked to it (status link-back).
+  const ref = (await searchParams).referral;
+  const referralId = typeof ref === "string" && /^[0-9a-f-]{36}$/i.test(ref) ? ref : null;
   const c = await pageOrg(`/assets/${id}`);
   let data;
   try {
@@ -60,6 +63,8 @@ async function Asset({ params }: { params: PageProps<"/assets/[id]">["params"] }
           <ActionForm action={launchAssessmentAction} submit="Launch assessment" pending="Queuing…">
             <input type="hidden" name="assetId" value={a.id} />
             <input type="hidden" name="idempotencyKey" value={randomUUID()} />
+            {referralId && <input type="hidden" name="referralId" value={referralId} />}
+            {referralId && <p className="notice ok small">This assessment is linked to the WebMonitor referral you consented to.</p>}
             <fieldset className="checks">
               <legend>Checks</legend>
               {catalogue.map((d) => {
