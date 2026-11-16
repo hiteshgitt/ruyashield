@@ -1,8 +1,13 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { forgotPasswordAction } from "../actions";
 import { AuthShell } from "../_shell";
 
-export default async function ForgotPage({ searchParams }: PageProps<"/auth/forgot">) {
+export default function ForgotPage({ searchParams }: PageProps<"/auth/forgot">) {
+  return <Suspense fallback={null}><ForgotPageBody searchParams={searchParams} /></Suspense>;
+}
+
+async function ForgotPageBody({ searchParams }: { searchParams: PageProps<"/auth/forgot">["searchParams"] }) {
   const sp = await searchParams;
   const email = typeof sp.email === "string" ? sp.email.slice(0, 200) : "";
   const msg = typeof sp.msg === "string" ? sp.msg.slice(0, 200) : "";

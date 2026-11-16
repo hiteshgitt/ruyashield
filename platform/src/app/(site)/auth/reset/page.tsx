@@ -1,9 +1,14 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { MIN_PASSWORD } from "@/server/auth/password";
 import { resetPasswordAction } from "../actions";
 import { AuthShell } from "../_shell";
 
-export default async function ResetPage({ searchParams }: PageProps<"/auth/reset">) {
+export default function ResetPage({ searchParams }: PageProps<"/auth/reset">) {
+  return <Suspense fallback={null}><ResetPageBody searchParams={searchParams} /></Suspense>;
+}
+
+async function ResetPageBody({ searchParams }: { searchParams: PageProps<"/auth/reset">["searchParams"] }) {
   const sp = await searchParams;
   const token = typeof sp.token === "string" ? sp.token.slice(0, 200) : "";
   const msg = typeof sp.msg === "string" ? sp.msg.slice(0, 200) : "";
