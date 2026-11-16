@@ -78,7 +78,7 @@ export type CallbackInput =
 
 export interface RequestMeta { ip: string | null; userAgent: string | null }
 
-async function rateLimited(keys: string[]): Promise<boolean> {
+export async function rateLimited(keys: string[]): Promise<boolean> {
   const since = new Date(Date.now() - RATE_WINDOW_MS);
   const rows = await db.select({ key: loginAttempts.key, n: count() }).from(loginAttempts)
     .where(and(inArray(loginAttempts.key, keys), gt(loginAttempts.createdAt, since)))
@@ -86,7 +86,7 @@ async function rateLimited(keys: string[]): Promise<boolean> {
   return rows.some((r) => r.n >= RATE_MAX_FAILURES);
 }
 
-async function recordFailure(keys: string[], meta: RequestMeta, reason: string, email?: string) {
+export async function recordFailure(keys: string[], meta: RequestMeta, reason: string, email?: string) {
   if (keys.length) await db.insert(loginAttempts).values(keys.map((key) => ({ key })));
   await withOrg(null, (tx) => audit(tx, {
     actor: { type: "anonymous", ip: meta.ip }, action: "auth.login_failed", outcome: "denied", reason,
@@ -173,11 +173,11 @@ async function oidcIdentity(currentUrl: URL, ls: typeof loginStates.$inferSelect
 
 async function upsertUser(id: Identity) {
   const rows = await db.insert(users)
-    .values({ email: id.email, displayName: id.name, idpIssuer: id.issuer, idpSubject: id.subject })
+    .values({ email: id.email, displayName: id.name, idpIssuer: id.issuer, idpSubject: id.subject, emailVerifiedAt: new Date() })
     .onConflictDoUpdate({ target: [users.idpIssuer, users.idpSubject], set: { email: id.email, displayName: id.name } })
     .returning()
     .catch((e: unknown) => {
-      if (isUniqueViolation(e)) throw new AppError(409, "account_conflict", "This email is already linked to a different sign-in.");
+      if (isUniqueViolation(e)) throw new AppError(409, "account_conflict", "This email already has a RuyaShield account that signs in with email and password. Sign in with your email instead.");
       throw e;
     });
   return rows[0];

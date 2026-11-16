@@ -588,6 +588,13 @@ export async function revokeTokenAction(_: ActionState, f: FormData): Promise<Ac
   });
 }
 
+export async function requestProAction(): Promise<ActionState> {
+  return run(async () => {
+    await orgPlanSvc.requestPro(await requireOrgContext(), await requestMeta());
+    return { ok: "Pro requested. We will switch your organization and let your admins know." };
+  });
+}
+
 export async function setOrgPlanAction(_: ActionState, f: FormData): Promise<ActionState> {
   return run(async () => {
     const r = await orgPlanSvc.setOrgPlan(await requireSession(), { orgSlug: str(f, "orgSlug"), plan: str(f, "plan") }, await requestMeta());

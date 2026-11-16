@@ -1,12 +1,15 @@
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, withOrg } from "../db/client";
-import { orgs } from "../db/schema";
+import { orgs, users } from "../db/schema";
 import { audit } from "../audit/audit";
 import { AppError } from "../errors";
 import type { SessionInfo } from "../auth/session";
 import { notifyAdmins } from "../notifications/notifications";
 import { isOperator, requireOperator } from "./breakglass";
+import type { OrgFlags, Principal } from "../policy/policy";
+import { grantFor } from "../policy/matrix";
+import { appLink, brandedEmail, sendMail } from "../mail/mail";
 
 // Organization plans, switched by an operator until online payment exists. Every change is written to the
 // organization's own audit chain and announced to its admins.
@@ -16,9 +19,12 @@ export type OrgPlan = (typeof ORG_PLANS)[number];
 
 export async function listOrgPlans(s: SessionInfo) {
   if (!isOperator(s.email)) throw new AppError(403, "forbidden");
-  const r = await db.execute<{ id: string; name: string; slug: string; plan: string; created_at: Date; members: string }>(
-    sql`SELECT id, name, slug, plan, created_at, members FROM operator_org_list()`);
-  return r.rows.map((o) => ({ id: o.id, name: o.name, slug: o.slug, plan: o.plan, createdAt: new Date(o.created_at), members: Number(o.members) }));
+  const r = await db.execute<{ id: string; name: string; slug: string; plan: string; created_at: Date; members: string; pro_requested_at: Date | null }>(
+    sql`SELECT id, name, slug, plan, created_at, members, pro_requested_at FROM operator_org_list()`);
+  return r.rows.map((o) => ({
+    id: o.id, name: o.name, slug: o.slug, plan: o.plan, createdAt: new Date(o.created_at), members: Number(o.members),
+    proRequestedAt: o.pro_requested_at ? new Date(o.pro_requested_at) : null,
+  }));
 }
 
 const setInput = z.object({ orgSlug: z.string().trim().min(1).max(80), plan: z.enum(ORG_PLANS) });
@@ -32,7 +38,7 @@ export async function setOrgPlan(s: SessionInfo, input: unknown, meta: { ip?: st
   await withOrg(o.id, async (tx) => {
     const before = (await tx.select({ plan: orgs.plan }).from(orgs).where(eq(orgs.id, o.id)))[0]?.plan;
     if (before === v.data.plan) return;
-    await tx.update(orgs).set({ plan: v.data.plan }).where(eq(orgs.id, o.id));
+    await tx.update(orgs).set({ plan: v.data.plan, ...(v.data.plan === "pro" ? { proRequestedAt: null, proRequestedBy: null } : {}) }).where(eq(orgs.id, o.id));
     await audit(tx, {
       actor: { type: "user", id: s.userId, ip: meta.ip }, action: "org.plan_changed", target: { type: "org", id: o.id },
       requestId: meta.requestId, details: { from: before, to: v.data.plan },
@@ -46,4 +52,31 @@ export async function setOrgPlan(s: SessionInfo, input: unknown, meta: { ip?: st
     });
   });
   return { name: o.name, plan: v.data.plan };
+}
+
+/** An org admin asks for Pro from the plan page: recorded on the org, audited, and emailed to the operators. */
+export async function requestPro(c: { principal: Principal; org: OrgFlags & { id: string; name?: string } }, meta: { ip?: string | null; requestId?: string | null } = {}) {
+  if (c.org.plan === "pro") throw new AppError(409, "already_pro", "This organization is already on Pro.");
+  // Org admins only; asking for Pro changes nothing by itself, so it does not need a fresh MFA step-up.
+  if (grantFor(c.principal.role, "org.settings.edit") === "N" || c.principal.tokenScopes || c.principal.breakGlassId) throw new AppError(403, "forbidden");
+  const first = await withOrg(c.org.id, async (tx) => {
+    const before = (await tx.select({ at: orgs.proRequestedAt }).from(orgs).where(eq(orgs.id, c.org.id)))[0]?.at ?? null;
+    await tx.update(orgs).set({ proRequestedAt: new Date(), proRequestedBy: c.principal.userId }).where(eq(orgs.id, c.org.id));
+    await audit(tx, { actor: { type: "user", id: c.principal.userId, ip: meta.ip }, action: "org.pro_requested", target: { type: "org", id: c.org.id }, requestId: meta.requestId });
+    return !before;
+  });
+  const operators = (process.env.RUYA_OPERATOR_EMAILS ?? "").split(",").map((e) => e.trim()).filter(Boolean);
+  if (operators.length) {
+    const who = (await db.select({ email: users.email }).from(users).where(eq(users.id, c.principal.userId)))[0]?.email ?? "an admin";
+    await sendMail({
+      to: operators.join(","), subject: `Pro requested: ${c.org.name ?? c.org.id}`,
+      text: `${who} asked to upgrade ${c.org.name ?? c.org.id} to RuyaShield Pro.\nSwitch it on the operator console: ${appLink("/operator")}`,
+      html: brandedEmail({
+        preheader: `${who} asked for Pro.`, title: "Pro requested",
+        paragraphs: [`${who} asked to upgrade ${c.org.name ?? "an organization"} to RuyaShield Pro.`, "Switch the plan on the operator console. The organization's admins are notified when it changes."],
+        button: { label: "Open the operator console", href: appLink("/operator") },
+      }),
+    }).catch(() => undefined);
+  }
+  return { first };
 }

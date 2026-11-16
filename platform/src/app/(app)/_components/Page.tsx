@@ -40,7 +40,31 @@ export function ProNotice({ children }: { children: ReactNode }) {
   return (
     <p className="notice pro small">
       <span className="badge pro">Pro</span> {children}{" "}
-      <a href="https://ruyalab.com/" target="_blank" rel="noopener noreferrer">Ask Ruya Lab to upgrade your organization</a>.
+      <a href="/settings/plan">See plans and request Pro</a>.
     </p>
+  );
+}
+
+/**
+ * A locked Pro area for Free organizations: a blurred placeholder of what is there, what it is, and the way
+ * to unlock it. Nothing real is rendered underneath; the server does not send the data either.
+ */
+export function ProGate({ title, children, rows = 3, compact = false }: { title: string; children: ReactNode; rows?: number; compact?: boolean }) {
+  return (
+    <section className={`pro-gate${compact ? " compact" : ""}`} aria-label={`${title} (Pro)`}>
+      <div className="pro-gate-fake" aria-hidden="true">
+        {Array.from({ length: rows }, (_, i) => <span key={i} style={{ width: `${92 - ((i * 17) % 40)}%` }} />)}
+      </div>
+      <div className="pro-gate-body">
+        <span className="pro-gate-lock" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5" /><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" /></svg>
+        </span>
+        <div className="pro-gate-text">
+          <h3>{title} <span className="badge pro">Pro</span></h3>
+          <p>{children}</p>
+        </div>
+        <a className="button pro-gate-cta" href="/settings/plan">Get Pro to see all</a>
+      </div>
+    </section>
   );
 }

@@ -13,7 +13,7 @@ import { fmt, pageOrg } from "../../_lib/page";
 import { isProOrg } from "@/server/policy/policy";
 import { Remediation } from "./Remediation";
 import { ZealotPanel } from "./ZealotPanel";
-import { Loading, MetaChips, ProNotice, SectionHead } from "../../_components/Page";
+import { Loading, MetaChips, ProGate, ProNotice, SectionHead } from "../../_components/Page";
 import { TableWrap } from "../../_components/TableWrap";
 import { SECURITY_AREAS, TIER_LABEL } from "@/server/reports/areas";
 
@@ -54,8 +54,12 @@ async function Finding({ params }: { params: PageProps<"/findings/[id]">["params
     data = await getFinding(c, id);
   } catch (e) {
     if (isAppError(e) && e.status === 404) notFound();
+    if (isAppError(e) && e.code === "pro_required") {
+      return <ProGate title="This finding is part of Pro" rows={6}>{e.message}</ProGate>;
+    }
     throw e;
   }
+  const pro = isProOrg(c.org);
   const { finding: f, asset: a, history, comments, occurrences, acceptance, people, assignees, priority, overdue, transitions, can } = data;
   const who = (uid: string | null | undefined) => (uid ? people.get(uid)?.name ?? people.get(uid)?.email ?? "former member" : "—");
   const now = new Date();
@@ -129,15 +133,28 @@ async function Finding({ params }: { params: PageProps<"/findings/[id]">["params
           {f.remediation && (<><SectionHead title="Suggested remediation"><span className="source-tag">From the check</span></SectionHead><div className="card"><p>{f.remediation}</p></div></>)}
 
           <SectionHead title="Evidence"><span className="source-tag verified">Captured by RuyaShield checks</span></SectionHead>
-          {f.latestEvidenceId
+          {!pro ? (
+            <ProGate title="Evidence" rows={4}>The exact request, response and headers RuyaShield captured for this finding, integrity-checked with SHA-256.</ProGate>
+          ) : f.latestEvidenceId
             ? <Suspense fallback={<Loading what="evidence" />}><Evidence c={c} id={f.latestEvidenceId} raw={can.downloadRaw} /></Suspense>
             : <div className="card evidence small"><pre className="evidence-body" tabIndex={0} aria-label="Evidence">{JSON.stringify(f.evidence, null, 2)}</pre><p className="muted">Recorded before evidence storage (P2); no integrity hash.</p></div>}
 
-          <Suspense fallback={<Loading what="verification" />}><Verification c={c} findingId={f.id} status={f.status} /></Suspense>
+          {pro ? (
+            <>
+              <Suspense fallback={<Loading what="verification" />}><Verification c={c} findingId={f.id} status={f.status} /></Suspense>
 
-          <Suspense fallback={<Loading what="Zealot analysis" />}><ZealotPanel c={c} findingId={f.id} remediation={f.remediation} /></Suspense>
+              <Suspense fallback={<Loading what="Zealot analysis" />}><ZealotPanel c={c} findingId={f.id} remediation={f.remediation} /></Suspense>
 
-          <Suspense fallback={<Loading what="remediation" />}><Remediation c={c} findingId={f.id} status={f.status} /></Suspense>
+              <Suspense fallback={<Loading what="remediation" />}><Remediation c={c} findingId={f.id} status={f.status} /></Suspense>
+            </>
+          ) : (
+            <>
+              <SectionHead title="Investigate, fix and prove" />
+              <ProGate title="Zealot, fix plans and FixProof re-tests" rows={6}>
+                Zealot explains this finding with cited evidence, prepares a reviewed fix plan for approval, and a FixProof re-test confirms the fix before the finding is closed.
+              </ProGate>
+            </>
+          )}
         </div>
 
         {(transitions.length > 0 || can.assign || can.triage) && (

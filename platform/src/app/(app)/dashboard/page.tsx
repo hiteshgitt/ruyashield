@@ -9,7 +9,7 @@ import { StatusBadge } from "../_components/StatusBadge";
 import { Meter } from "../_components/Meter";
 import { messageFor } from "../_lib/messages";
 import { fmt, pageOrg } from "../_lib/page";
-import { Empty, Loading, PageHeader } from "../_components/Page";
+import { Empty, Loading, PageHeader, ProGate } from "../_components/Page";
 import { TableWrap } from "../_components/TableWrap";
 import { AreaBoard, AssetMap, ScoreGauge, SeverityDonut, StatCard, TrendChart } from "../_components/Charts";
 import { nextStep, type NextStep } from "@/server/reports/nextStep";
@@ -118,6 +118,7 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/dashboard
 
       {coverage && coverage.assets.length > 0 && <UptimeCard coverage={coverage} canConnect={canConnect} />}
 
+      {isProOrg(c.org) ? (
       <div className="dash-wide">
         <section className="card panel" aria-labelledby="trend-h">
           <h3 id="trend-h">Findings over the last {TREND_WEEKS} weeks</h3>
@@ -135,6 +136,11 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/dashboard
           </ul>
         </section>
       </div>
+      ) : (
+        <ProGate title="Trends and asset map" rows={5}>
+          See how findings open and close week by week, and every asset on one map, riskiest first.
+        </ProGate>
+      )}
 
       <div className="panels panels-2">
         <section className="card panel">

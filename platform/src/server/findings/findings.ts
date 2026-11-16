@@ -8,7 +8,7 @@ import {
 } from "../db/schema";
 import { audit, type Actor } from "../audit/audit";
 import { AppError, forbidden, notFound } from "../errors";
-import { authorize, decide, type OrgFlags, type Principal, type Resource } from "../policy/policy";
+import { assertPro, authorize, decide, isProOrg, type OrgFlags, type Principal, type Resource } from "../policy/policy";
 import { grantFor, type Role } from "../policy/matrix";
 import { evidenceClass, redactEvidence, verifyIntegrity } from "./evidence";
 import { ALL_STATUSES, isOpen, USER_TRANSITIONS, userTransitionsFrom } from "./lifecycle";
@@ -44,6 +44,23 @@ async function loadFinding(tx: Tx, c: Ctx, id: string, lock = false) {
   const a = (await tx.select().from(assets).where(eq(assets.id, f.assetId)))[0];
   if (!a || !canView(c.principal, f, a, c.org)) throw notFound();
   return { f, a };
+}
+
+/** Free plan: only this many findings (the highest-priority ones) are shown in full. */
+export const FREE_FINDING_LIMIT = 5;
+
+/** The findings a Free organization may open: its top FREE_FINDING_LIMIT by priority, within the caller's scope. */
+async function freeVisibleIds(tx: Tx, c: Ctx): Promise<Set<string>> {
+  const p = c.principal;
+  const scope: SQL[] = [];
+  if (grantFor(p.role, "finding.view") === "S" && p.restricted) {
+    const mine = eq(findings.ownerId, p.userId);
+    scope.push(p.clientGroupIds.length ? or(inArray(assets.clientGroupId, [...p.clientGroupIds]), mine)! : mine);
+  }
+  const score = prioritySql(findings.severity, findings.confidence, assets.criticality);
+  const rows = await tx.select({ id: findings.id }).from(findings).innerJoin(assets, eq(assets.id, findings.assetId))
+    .where(scope.length ? and(...scope) : undefined).orderBy(desc(score), asc(findings.id)).limit(FREE_FINDING_LIMIT);
+  return new Set(rows.map((r) => r.id));
 }
 
 const isOverdue = (f: Pick<FindingRow, "dueAt" | "status">, now = new Date()) => f.dueAt != null && f.dueAt < now && isOpen(f.status);
@@ -123,8 +140,24 @@ export async function listFindings(c: Ctx, input: unknown = {}) {
       .where(countWhere.length ? and(...countWhere) : undefined).groupBy(findings.severity);
     const bySeverity = Object.fromEntries(SEVERITIES.map((s) => [s, 0])) as Record<Severity, number>;
     for (const r of counts) bySeverity[r.severity] = Number(r.n);
+    // Free: counts stay complete (so nothing serious is hidden from view), but only the top findings are listed.
+    if (!isProOrg(c.org)) {
+      const visible = await freeVisibleIds(tx, c);
+      const shown = page.filter((r) => visible.has(r.f.id));
+      const total = q.severity ? bySeverity[q.severity as Severity] : Object.values(bySeverity).reduce((x, y) => x + y, 0);
+      return {
+        bySeverity,
+        lockedCount: Math.max(0, total - shown.length),
+        items: shown.map((r) => ({
+          ...r.f, host: r.host, assetName: r.assetName, owner: r.f.ownerId ? owners.get(r.f.ownerId) ?? null : null,
+          priority: priorityOf(r.f, r.criticality), overdue: isOverdue(r.f, now),
+        })),
+        nextCursor: null,
+      };
+    }
     return {
       bySeverity,
+      lockedCount: 0,
       items: page.map((r) => ({
         ...r.f, host: r.host, assetName: r.assetName, owner: r.f.ownerId ? owners.get(r.f.ownerId) ?? null : null,
         priority: priorityOf(r.f, r.criticality), overdue: isOverdue(r.f, now),
@@ -148,6 +181,9 @@ async function memberNames(tx: Tx, orgId: string, ids: string[]) {
 export async function getFinding(c: Ctx, id: string) {
   return withOrg(c.org.id, async (tx) => {
     const { f, a } = await loadFinding(tx, c, id);
+    if (!isProOrg(c.org) && !(await freeVisibleIds(tx, c)).has(f.id)) {
+      throw new AppError(402, "pro_required", `The Free plan shows your ${FREE_FINDING_LIMIT} highest-priority findings. Get Pro to see all of them.`);
+    }
     const history = await tx.select().from(findingStatusHistory).where(eq(findingStatusHistory.findingId, f.id)).orderBy(asc(findingStatusHistory.createdAt));
     const comments = await tx.select().from(findingComments).where(eq(findingComments.findingId, f.id)).orderBy(asc(findingComments.createdAt));
     const occurrences = await tx.select().from(findingOccurrences).where(eq(findingOccurrences.findingId, f.id)).orderBy(desc(findingOccurrences.seenAt)).limit(50);
@@ -373,6 +409,7 @@ async function integrityFailed(c: Ctx, e: { id: string; sha256: string }, findin
 
 /** Evidence as shown in the app: integrity-checked, with secrets and personal data redacted. */
 export async function getEvidence(c: Ctx, evidenceId: string) {
+  assertPro(c.org);
   const out = await withOrg(c.org.id, async (tx) => {
     const { e, f } = await evidenceFinding(tx, c, evidenceId);
     const ok = verifyIntegrity(e);

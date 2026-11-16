@@ -5,7 +5,8 @@ import { isAppError } from "@/server/errors";
 import { grantFor } from "@/server/policy/matrix";
 import { ActionForm } from "../_components/ActionForm";
 import { StatCard } from "../_components/Charts";
-import { Empty, Loading, PageHeader } from "../_components/Page";
+import { Empty, Loading, PageHeader, ProGate } from "../_components/Page";
+import { isProOrg } from "@/server/policy/policy";
 import { StatusBadge } from "../_components/StatusBadge";
 import { TableWrap } from "../_components/TableWrap";
 import { createCloudflareSourceAction, createLogAgentSourceAction, disableAttackSourceAction } from "../actions";
@@ -46,6 +47,13 @@ async function Attacks({ searchParams }: { searchParams: PageProps<"/attacks">["
   const daysRaw = Number(typeof sp.days === "string" ? sp.days : 7);
   const days = (STATS_DAYS as readonly number[]).includes(daysRaw) ? daysRaw : 7;
   const c = await pageOrg("/attacks");
+  if (!isProOrg(c.org)) {
+    return (
+      <ProGate title="Attack monitoring" rows={7}>
+        Connect Cloudflare or a log agent and see where hostile traffic against your verified sites comes from: IP, country, network and attack type, with spike alerts.
+      </ProGate>
+    );
+  }
   const canManage = grantFor(c.principal.role, "integration.manage") !== "N";
 
   let stats: AttackStats, sources: SourceView[];

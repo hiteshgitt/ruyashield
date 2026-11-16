@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { db } from "@/server/db/client";
 import { users } from "@/server/db/schema";
@@ -49,5 +50,39 @@ run("organization plans (database)", () => {
     } finally {
       process.env.RUYA_OPERATOR_EMAILS = prev;
     }
+  });
+});
+
+run("Free plan limits (database)", () => {
+  it("lists only the top findings, refuses the rest, evidence and attacks on Free", async () => {
+    const { assets: assetsT, findings: findingsT } = await import("@/server/db/schema");
+    const { withOrg } = await import("@/server/db/client");
+    const { listFindings, getFinding, getEvidence, FREE_FINDING_LIMIT } = await import("@/server/findings/findings");
+    const { getStats } = await import("@/server/attacks/attacks");
+    const user = await newUser();
+    const prev = process.env.RUYA_DEFAULT_ORG_PLAN;
+    delete process.env.RUYA_DEFAULT_ORG_PLAN;
+    const org = await createOrg(user, { name: `Free ${randomUUID().slice(0, 8)}` }).finally(() => { process.env.RUYA_DEFAULT_ORG_PLAN = prev; });
+    const ctx = (await loadPrincipal(user, org.id))!;
+    const [a] = await withOrg(org.id, (tx) => tx.insert(assetsT).values({ orgId: org.id, host: `free-${randomUUID().slice(0, 8)}.example.com`, displayName: "x", environment: "production", createdBy: user.userId, status: "verified" }).returning());
+    const { launchAssessment, runAssessment } = await import("@/server/assessments/assessments");
+    const { sql } = await import("drizzle-orm");
+    const { assessment } = await launchAssessment(ctx, { assetId: a.id, idempotencyKey: `k-${randomUUID()}`, checkIds: ["http.security_headers@1"] });
+    const job = await withOrg(org.id, (tx) => tx.execute<{ payload: { assessmentId: string; token: string } }>(sql`SELECT payload FROM outbox WHERE business_key = ${`assessment:${assessment.id}:1`}`));
+    const many = Array.from({ length: FREE_FINDING_LIMIT + 3 }, (_, i) => ({
+      issueKey: `k${i}`, title: `Finding ${i}`, severity: i === 0 ? "high" as const : "low" as const, location: `https://${a.host}/`, evidence: {}, remediation: "Fix it.",
+    }));
+    await runAssessment(org.id, job.rows[0].payload, { adapters: new Map([["http.security_headers@1", { id: "http.security_headers@1", checkKey: "http.security_headers", run: async () => ({ status: "ok" as const, findings: many, evidence: {} }) }]]), minIntervalMs: 0 });
+    const list = await listFindings(ctx, {});
+    expect(list.items).toHaveLength(FREE_FINDING_LIMIT);
+    expect(list.lockedCount).toBe(3);
+    expect(Object.values(list.bySeverity).reduce((x, y) => x + y, 0)).toBe(FREE_FINDING_LIMIT + 3);
+    const shown = new Set(list.items.map((f) => f.id));
+    const all = await withOrg(org.id, (tx) => tx.select({ id: findingsT.id }).from(findingsT).where(eq(findingsT.orgId, org.id)));
+    const hidden = all.find((r) => !shown.has(r.id))!;
+    await expect(getFinding(ctx, hidden.id)).rejects.toMatchObject({ status: 402, code: "pro_required" });
+    await expect(getFinding(ctx, list.items[0].id)).resolves.toBeTruthy();
+    await expect(getEvidence(ctx, randomUUID())).rejects.toMatchObject({ status: 402 });
+    await expect(getStats(ctx)).rejects.toMatchObject({ status: 402 });
   });
 });

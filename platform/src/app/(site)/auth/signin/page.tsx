@@ -3,6 +3,8 @@ import { Suspense } from "react";
 import { getContext } from "@/server/context";
 import { safeReturnTo } from "@/server/auth/login";
 import { logoutAction } from "@/app/(app)/actions";
+import { MIN_PASSWORD } from "@/server/auth/password";
+import { passwordSignInAction, resendVerificationAction, signUpAction } from "../actions";
 
 // Sign in or create an account. RuyaShield accounts come from Google: the first sign-in with a Google account
 // creates the RuyaShield account. Google's account chooser is always shown, so any account can be picked.
@@ -65,21 +67,61 @@ async function Card({ searchParams }: { searchParams: PageProps<"/auth/signin">[
     );
   }
 
+  const email = typeof sp.email === "string" ? sp.email.slice(0, 200) : "";
+  const name = typeof sp.name === "string" ? sp.name.slice(0, 80) : "";
+  const error = typeof sp.error === "string" ? sp.error : "";
+  const msg = typeof sp.msg === "string" ? sp.msg.slice(0, 200) : "";
   return (
     <>
       {sp.signedOut === "1" && <p className="signin-status" role="status">You are signed out.</p>}
+      {sp.verified === "1" && <p className="signin-status" role="status">Email verified. Sign in to continue.</p>}
+      {sp.reset === "1" && <p className="signin-status" role="status">Password changed. Sign in with your new password.</p>}
+      {sp.sent === "verify" && (
+        <p className="signin-status" role="status">Check your inbox{email ? <> at <b>{email}</b></> : ""}. We sent a link to verify your email; it works for 24 hours.</p>
+      )}
+      {error && <p className="signin-error" role="alert">{msg || "Something went wrong. Please try again."}</p>}
+      {error === "email_not_verified" && (
+        <form action={resendVerificationAction} className="signin-inline">
+          <input type="hidden" name="email" value={email} />
+          <button type="submit" className="signin-link">Send a new verification link</button>
+        </form>
+      )}
+
       {/* eslint-disable-next-line @next/next/no-img-element -- static 128 px mark */}
       <img src="/brand/ruyashield-mark-128.png" alt="" width={56} height={56} className="signin-mark" />
-      <h1 id="signin-title" className="signin-title">{isNew ? "Create your account" : "Welcome to RuyaShield"}</h1>
-      <p className="signin-muted">Sign in or create an account with Google. Your first sign-in creates your RuyaShield account.</p>
+      <h1 id="signin-title" className="signin-title">{isNew ? "Create your account" : "Welcome back"}</h1>
+      <p className="signin-muted">{isNew ? "Use Google, or your email and a password. Every account adds an authenticator code." : "Sign in with Google or with your email and password."}</p>
+
       <a className="signin-google" href={login}><GoogleMark /> Continue with Google</a>
-      <p className="signin-hint">You can choose any Google account, or add another one, on the next screen.</p>
+      <div className="signin-or"><span>or with email</span></div>
+
+      {isNew ? (
+        <form action={signUpAction} className="signin-form">
+          <label>Name<input name="name" required maxLength={80} autoComplete="name" defaultValue={name} /></label>
+          <label>Work email<input name="email" type="email" required maxLength={200} autoComplete="email" defaultValue={email} /></label>
+          <label>Password<input name="password" type="password" required minLength={MIN_PASSWORD} maxLength={200} autoComplete="new-password" /></label>
+          <label>Confirm password<input name="confirm" type="password" required minLength={MIN_PASSWORD} maxLength={200} autoComplete="new-password" /></label>
+          <p className="signin-hint left">At least {MIN_PASSWORD} characters. We email you a link to verify the address.</p>
+          <button type="submit" className="btn btn-primary signin-submit">Create account</button>
+          <p className="signin-switch">Already have an account? <Link href="/auth/signin">Sign in</Link></p>
+        </form>
+      ) : (
+        <form action={passwordSignInAction} className="signin-form">
+          <input type="hidden" name="returnTo" value={returnTo} />
+          <label>Email<input name="email" type="email" required maxLength={200} autoComplete="email" defaultValue={email} /></label>
+          <label><span className="signin-label-row">Password <Link href={`/auth/forgot${email ? `?email=${encodeURIComponent(email)}` : ""}`}>Forgot password?</Link></span>
+            <input name="password" type="password" required maxLength={200} autoComplete="current-password" /></label>
+          <button type="submit" className="btn btn-primary signin-submit">Sign in</button>
+          <p className="signin-switch">New to RuyaShield? <Link href="/auth/signin?new=1">Create an account</Link></p>
+        </form>
+      )}
+
       <ol className="signin-steps">
-        <li><span>1</span>Sign in with Google</li>
-        <li><span>2</span>Set up your authenticator app</li>
+        <li><span>1</span>{isNew ? "Create your account and verify your email" : "Sign in with Google or your email"}</li>
+        <li><span>2</span>Enter your authenticator code</li>
         <li><span>3</span>Create or join an organization</li>
       </ol>
-      <p className="signin-foot">New organizations start on the <b className="signin-strong">Free</b> plan. Pro adds reports and downloads.</p>
+      <p className="signin-foot">New organizations start on the <b className="signin-strong">Free</b> plan. Pro adds every finding, evidence, Zealot, fixes, reports and downloads.</p>
     </>
   );
 }

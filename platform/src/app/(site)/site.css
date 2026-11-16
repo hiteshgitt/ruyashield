@@ -447,3 +447,20 @@ html.rs-motion:not(.rs-ready) .hero-copy, html.rs-motion:not(.rs-ready) .console
 .signin-status { margin: 0; padding: .625rem .875rem; border-radius: .75rem; font-size: .875rem; color: var(--green); background: rgba(74, 222, 128, .08); border: 1px solid rgba(74, 222, 128, .25); }
 .signin-actions { display: flex; flex-wrap: wrap; gap: .625rem; }
 .signin-actions form { margin: 0; }
+.signin-grid.single { grid-template-columns: minmax(0, 28rem); justify-content: center; }
+.signin-error { margin: 0; padding: .625rem .875rem; border-radius: .75rem; font-size: .875rem; color: #fca5a5; background: rgba(248, 113, 113, .08); border: 1px solid rgba(248, 113, 113, .28); }
+.signin-error a, .signin-status a { color: inherit; text-decoration: underline; }
+.signin-inline { margin: -.25rem 0 0; }
+.signin-link { background: none; border: 0; padding: 0; color: var(--violet-3); font: inherit; font-size: .875rem; text-decoration: underline; cursor: pointer; }
+.signin-or { display: flex; align-items: center; gap: .75rem; color: var(--text-3); font-size: .75rem; text-transform: uppercase; letter-spacing: .12em; font-family: var(--font-mono), monospace; }
+.signin-or::before, .signin-or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.signin-form { display: grid; gap: .75rem; }
+.signin-form label { display: grid; gap: .375rem; font-size: .8125rem; font-weight: 500; color: var(--text-2); }
+.signin-form input { width: 100%; box-sizing: border-box; min-height: 2.875rem; padding: 0 .875rem; border-radius: .75rem; border: 1px solid var(--line-2); background: rgba(7, 6, 12, .55); color: var(--text); font: inherit; font-size: .9375rem; transition: border-color .15s ease, box-shadow .15s ease; }
+.signin-form input:focus { outline: none; border-color: rgba(196, 181, 253, .6); box-shadow: 0 0 0 3px rgba(139, 92, 246, .22); }
+.signin-label-row { display: flex; justify-content: space-between; gap: .5rem; }
+.signin-label-row a, .signin-switch a { color: var(--violet-3); text-decoration: none; font-weight: 500; }
+.signin-label-row a:hover, .signin-switch a:hover { text-decoration: underline; }
+.signin-submit { width: 100%; margin-top: .25rem; }
+.signin-switch { margin: 0; text-align: center; font-size: .875rem; color: var(--text-3); }
+.signin-hint.left { text-align: left; margin: 0; }

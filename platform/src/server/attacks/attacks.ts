@@ -5,7 +5,7 @@ import { db, isUuid, withOrg, type Tx } from "../db/client";
 import { assets, attackEvents, attackSources, type AttackSourceStatus } from "../db/schema";
 import { audit } from "../audit/audit";
 import { AppError, forbidden, notFound } from "../errors";
-import { authorize, decide, type OrgFlags, type Principal } from "../policy/policy";
+import { assertPro, authorize, decide, type OrgFlags, type Principal } from "../policy/policy";
 import { randomToken, sha256 } from "../auth/session";
 import { notifyAdmins } from "../notifications/notifications";
 import { assetScope } from "../reports/summary";
@@ -53,6 +53,7 @@ async function verifiedDomain(tx: Tx, assetId: string) {
 }
 
 export async function createCloudflareSource(c: Ctx, input: unknown) {
+  assertPro(c.org);
   await authorize(c.principal, "integration.manage", { type: "org", id: c.org.id }, c.org);
   const v = cfInput.safeParse(input);
   if (!v.success) throw new AppError(422, "invalid_request", v.error.issues[0].message);
@@ -72,6 +73,7 @@ export async function createCloudflareSource(c: Ctx, input: unknown) {
 
 /** Creates a log-agent source. The ingest token is returned once and stored only as a SHA-256 hash. */
 export async function createLogAgentSource(c: Ctx, input: unknown) {
+  assertPro(c.org);
   await authorize(c.principal, "integration.manage", { type: "org", id: c.org.id }, c.org);
   const v = agentInput.safeParse(input);
   if (!v.success) throw new AppError(422, "invalid_request", v.error.issues[0].message);
@@ -116,6 +118,7 @@ async function viewGate(c: Ctx) {
 }
 
 export async function listSources(c: Ctx): Promise<SourceView[]> {
+  assertPro(c.org);
   const scope = await viewGate(c);
   return withOrg(c.org.id, (tx) => tx.select({
     id: attackSources.id, assetId: attackSources.assetId, assetHost: assets.host, kind: attackSources.kind, name: attackSources.name,
@@ -145,6 +148,7 @@ export interface AttackStats {
 const typeLabel = (t: string) => (ATTACK_TYPES as Record<string, string>)[t] ?? "Other";
 
 export async function getStats(c: Ctx, opts: { assetId?: string | null; days?: number } = {}, now = new Date()): Promise<AttackStats> {
+  assertPro(c.org);
   const scope = await viewGate(c);
   const days = (STATS_DAYS as readonly number[]).includes(opts.days ?? 7) ? (opts.days ?? 7) : 7;
   const assetId = opts.assetId || null;

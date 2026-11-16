@@ -39,7 +39,7 @@ async function Operator() {
                   <td>{o.name}<div className="mono small muted">{o.slug}</div></td>
                   <td>{o.members}</td>
                   <td className="small nowrap">{fmt(o.createdAt)}</td>
-                  <td><span className={`badge${o.plan === "pro" ? " pro" : ""}`}>{o.plan === "pro" ? "Pro" : o.plan === "free" ? "Free" : o.plan}</span></td>
+                  <td><span className={`badge${o.plan === "pro" ? " pro" : ""}`}>{o.plan === "pro" ? "Pro" : o.plan === "free" ? "Free" : o.plan}</span>{o.proRequestedAt && o.plan !== "pro" && <div className="small"><span className="badge warn">Pro requested {fmt(o.proRequestedAt)}</span></div>}</td>
                   <td>
                     <ActionForm action={setOrgPlanAction} submit={o.plan === "pro" ? "Move to Free" : "Upgrade to Pro"} variant={o.plan === "pro" ? "secondary" : "primary"} className="row inline-form">
                       <input type="hidden" name="orgSlug" value={o.slug} />

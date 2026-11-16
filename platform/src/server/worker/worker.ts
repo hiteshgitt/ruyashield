@@ -1,5 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
-import nodemailer, { type Transporter } from "nodemailer";
+import type { Transporter } from "nodemailer";
+import { mailTransport } from "../mail/mail";
 import { db, withOrg } from "../db/client";
 import { findings, invites, memberships, outbox, processedMessages, users } from "../db/schema";
 import { allowPrivateFromEnv } from "../net/egress";
@@ -18,15 +19,8 @@ export interface OutboxMessage { id: string; org_id: string; topic: Topic; busin
 
 export interface WorkerDeps { mailer?: Pick<Transporter, "sendMail">; reverify?: typeof reverifyAsset; assessment?: RunDeps; verification?: RunDeps; remediation?: SandboxDeps }
 
-let transport: Transporter | undefined;
-function mailer(): Transporter {
-  transport ??= nodemailer.createTransport({
-    host: process.env.SMTP_HOST ?? "127.0.0.1", port: Number(process.env.SMTP_PORT ?? 1025),
-    secure: process.env.SMTP_SECURE === "true",
-    auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS ?? "" } : undefined,
-  });
-  return transport;
-}
+// The shared SMTP transport (Resend in production, Mailpit locally).
+const mailer = mailTransport;
 
 type Handler = (m: OutboxMessage, deps: WorkerDeps) => Promise<{ result: string; scrub?: boolean }>;
 

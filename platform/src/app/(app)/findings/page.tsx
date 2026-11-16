@@ -6,7 +6,8 @@ import { isAppError } from "@/server/errors";
 import { StatusBadge } from "../_components/StatusBadge";
 import { messageFor } from "../_lib/messages";
 import { fmt, pageOrg } from "../_lib/page";
-import { Empty, Loading, PageHeader } from "../_components/Page";
+import { Empty, Loading, PageHeader, ProGate } from "../_components/Page";
+import { FREE_FINDING_LIMIT } from "@/server/findings/findings";
 import { TableWrap } from "../_components/TableWrap";
 import { SECURITY_AREAS, areaByKey } from "@/server/reports/areas";
 import { SeverityCards } from "../_components/Charts";
@@ -102,7 +103,7 @@ async function Findings({ searchParams }: { searchParams: PageProps<"/findings">
         <span className="muted toolbar-end" role="status">{data.items.length} shown{next ? " on this page" : ""}</span>
       </form>
 
-      {data.items.length === 0 ? (
+      {data.items.length === 0 && data.lockedCount === 0 ? (
         <Empty>No findings match these filters. This does not mean the assets are free of issues — only that no check that ran reported one.</Empty>
       ) : (
         <TableWrap className="card">
@@ -121,6 +122,11 @@ async function Findings({ searchParams }: { searchParams: PageProps<"/findings">
             ))}
           </tbody></table>
         </TableWrap>
+      )}
+      {data.lockedCount > 0 && (
+        <ProGate title={`${data.lockedCount} more finding${data.lockedCount === 1 ? "" : "s"} hidden`} rows={5}>
+          The Free plan shows your {FREE_FINDING_LIMIT} highest-priority findings in full. The severity counts above include every finding; Pro lists all of them with evidence, Zealot explanations and fix plans.
+        </ProGate>
       )}
       {next && <p className="pager"><Link className="button secondary" href={next}>Next page →</Link></p>}
     </>

@@ -20,6 +20,22 @@ export const users = pgTable("users", {
   idpIssuer: text("idp_issuer").notNull(),
   idpSubject: text("idp_subject").notNull(),
   disabledAt: ts("disabled_at"),
+  emailVerifiedAt: ts("email_verified_at"),
+  createdAt: ts("created_at").notNull().defaultNow(),
+});
+
+export const passwordCredentials = pgTable("password_credentials", {
+  userId: uuid("user_id").primaryKey(),
+  hash: text("hash").notNull(),
+  updatedAt: ts("updated_at").notNull().defaultNow(),
+});
+
+export const emailTokens = pgTable("email_tokens", {
+  tokenHash: text("token_hash").primaryKey(),
+  userId: uuid("user_id").notNull(),
+  purpose: text("purpose").$type<"verify" | "reset">().notNull(),
+  expiresAt: ts("expires_at").notNull(),
+  usedAt: ts("used_at"),
   createdAt: ts("created_at").notNull().defaultNow(),
 });
 
@@ -91,6 +107,8 @@ export const orgs = pgTable("orgs", {
   name: text("name").notNull(),
   slug: text("slug").notNull(),
   plan: text("plan").notNull().default("free"),
+  proRequestedAt: ts("pro_requested_at"),
+  proRequestedBy: uuid("pro_requested_by"),
   region: text("region").notNull(),
   approverMustDiffer: boolean("approver_must_differ").notNull().default(true),
   aiEnabled: boolean("ai_enabled").notNull().default(false),
