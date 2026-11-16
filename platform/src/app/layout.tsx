@@ -3,6 +3,7 @@ import "./globals.css";
 import "./tokens.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.APP_URL ?? "https://ruyashield.ruyalab.com"),
   title: "RuyaShield",
   description: "Authorized-scope security assessment for the assets you own or are permitted to test.",
 };
