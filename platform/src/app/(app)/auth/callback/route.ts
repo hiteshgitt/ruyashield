@@ -3,6 +3,7 @@ import { completeLogin, LOGIN_STATE_COOKIE, type CallbackInput } from "@/server/
 import { secureCookies, sessionCookieName } from "@/server/auth/session";
 import { isAppError } from "@/server/errors";
 import { log } from "@/server/log";
+import { publicRequestUrl, publicUrl } from "@/server/http/public-url";
 
 function meta(request: NextRequest) {
   const fwd = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
@@ -16,20 +17,20 @@ function meta(request: NextRequest) {
 async function finish(request: NextRequest, input: CallbackInput) {
   try {
     const s = await completeLogin(input, meta(request));
-    const res = NextResponse.redirect(new URL(s.returnTo, request.nextUrl), 303);
+    const res = NextResponse.redirect(publicUrl(s.returnTo), 303);
     res.cookies.set(sessionCookieName(), s.token, { httpOnly: true, sameSite: "lax", secure: secureCookies(), path: "/", expires: s.expiresAt });
     res.cookies.delete({ name: LOGIN_STATE_COOKIE, path: "/auth" });
     return res;
   } catch (e) {
     if (!isAppError(e)) log.error("login callback failed", { err: String(e) });
     const code = isAppError(e) ? e.code : "login_failed";
-    return NextResponse.redirect(new URL(`/auth/error?code=${encodeURIComponent(code)}`, request.nextUrl), 303);
+    return NextResponse.redirect(publicUrl(`/auth/error?code=${encodeURIComponent(code)}`), 303);
   }
 }
 
 /** OIDC authorization-code redirect. */
 export async function GET(request: NextRequest) {
-  return finish(request, { kind: "oidc", currentUrl: request.nextUrl });
+  return finish(request, { kind: "oidc", currentUrl: publicRequestUrl(request.nextUrl) });
 }
 
 /** Local dev sign-in form (AUTH_PROVIDER=dev only; completeLogin refuses it otherwise). */
