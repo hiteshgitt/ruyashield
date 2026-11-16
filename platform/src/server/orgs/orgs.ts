@@ -49,7 +49,9 @@ export async function createOrg(s: SessionInfo, input: unknown, meta: { ip?: str
 
   const id = randomUUID();
   await withOrg(id, async (tx) => {
-    await tx.insert(orgs).values({ id, name, slug, region: process.env.DATA_REGION ?? "default", createdBy: s.userId });
+    // New organizations start on Free; RUYA_DEFAULT_ORG_PLAN=pro is for test databases and self-hosted installs.
+    const plan = process.env.RUYA_DEFAULT_ORG_PLAN === "pro" ? "pro" : "free";
+    await tx.insert(orgs).values({ id, name, slug, plan, region: process.env.DATA_REGION ?? "default", createdBy: s.userId });
     await tx.insert(memberships).values({ orgId: id, userId: s.userId, role: "org_admin" });
     await audit(tx, { actor: { type: "user", id: s.userId, ip: meta.ip }, action: "org.created", target: { type: "org", id }, requestId: meta.requestId, details: { name, slug } });
   }).catch((e: unknown) => {

@@ -34,3 +34,13 @@ export function SectionHead({ title, id, as: H = "h2", variant = "section", chil
 }) {
   return <div className={`${variant}-head`}><H id={id}>{title}</H>{children}</div>;
 }
+
+/** Shown where a Free organization meets a Pro feature (downloads, reports, raw evidence, audit export). */
+export function ProNotice({ children }: { children: ReactNode }) {
+  return (
+    <p className="notice pro small">
+      <span className="badge pro">Pro</span> {children}{" "}
+      <a href="https://ruyalab.com/" target="_blank" rel="noopener noreferrer">Ask Ruya Lab to upgrade your organization</a>.
+    </p>
+  );
+}

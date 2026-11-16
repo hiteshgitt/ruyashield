@@ -25,6 +25,7 @@ import * as lifecycleSvc from "@/server/orgs/lifecycle";
 import * as tokenSvc from "@/server/tokens/tokens";
 import { createWebMonitorToken } from "@/server/webmonitor/watch";
 import * as breakGlassSvc from "@/server/operator/breakglass";
+import * as orgPlanSvc from "@/server/operator/plans";
 import { allowPrivateFromEnv } from "@/server/net/egress";
 import { AppError } from "@/server/errors";
 import { run, str, type ActionState } from "./_lib/action";
@@ -573,7 +574,7 @@ export async function createTokenAction(_: ActionState, f: FormData): Promise<Ac
   });
 }
 
-export async function createWebMonitorTokenAction(_: ActionState): Promise<ActionState> {
+export async function createWebMonitorTokenAction(): Promise<ActionState> {
   return run(async () => {
     const t = await createWebMonitorToken(await requireOrgContext());
     return { ok: `Token created; it expires ${t.expiresAt.toISOString().slice(0, 10)}. Copy it now: it is not shown again.`, tone: "warn", secret: t.token };
@@ -584,6 +585,13 @@ export async function revokeTokenAction(_: ActionState, f: FormData): Promise<Ac
   return run(async () => {
     await tokenSvc.revokeApiToken(await requireOrgContext(), str(f, "tokenId"));
     return { ok: "Token revoked.", tone: "warn" };
+  });
+}
+
+export async function setOrgPlanAction(_: ActionState, f: FormData): Promise<ActionState> {
+  return run(async () => {
+    const r = await orgPlanSvc.setOrgPlan(await requireSession(), { orgSlug: str(f, "orgSlug"), plan: str(f, "plan") }, await requestMeta());
+    return { ok: `${r.name} is now on ${r.plan === "pro" ? "Pro" : "Free"}.` };
   });
 }
 

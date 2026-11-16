@@ -8,7 +8,7 @@ import {
 } from "../db/schema";
 import { audit, type Actor } from "../audit/audit";
 import { AppError, isAppError, notFound } from "../errors";
-import { authorize, decide, type OrgFlags, type Principal, type Resource } from "../policy/policy";
+import { assertPro, authorize, decide, type OrgFlags, type Principal, type Resource } from "../policy/policy";
 import { enqueue } from "../outbox/outbox";
 import { EgressError } from "../net/egress";
 import { eligibilityOf } from "../assets/assets";
@@ -482,6 +482,7 @@ export async function exportFixProof(c: Ctx, id: string, format: string) {
   if (format !== "json" && format !== "pdf") throw new AppError(422, "invalid_format", "Format must be json or pdf.");
   const { row, f, a, integrity } = await withOrg(c.org.id, (tx) => loadFixProof(tx, c, id));
   await authorize(c.principal, "fixproof.view", res(f, a), c.org);
+  assertPro(c.org);
   if (!integrity.ok) {
     await integrityFailed(c, row, integrity);
     throw new AppError(409, "fixproof_integrity_failed", "This FixProof record failed its integrity check and cannot be exported.");

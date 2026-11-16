@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import { getContext } from "@/server/context";
 import { BREAK_GLASS_MAX_MINUTES, isOperator, listBreakGlass } from "@/server/operator/breakglass";
 import { ActionForm } from "../_components/ActionForm";
-import { endBreakGlassAction, startBreakGlassAction } from "../actions";
+import { endBreakGlassAction, setOrgPlanAction, startBreakGlassAction } from "../actions";
+import { listOrgPlans } from "@/server/operator/plans";
 import { fmt } from "../_lib/page";
 import { Loading, PageHeader } from "../_components/Page";
 import { TableWrap } from "../_components/TableWrap";
@@ -23,8 +24,34 @@ async function Operator() {
   if (!isOperator(c.session.email)) return <p className="notice warn">Not available.</p>;
   const bg = c.ctx?.principal.breakGlassId ? c.ctx : null;
   const history = bg ? await listBreakGlass(c.session, bg.org.id) : [];
+  const orgPlans = bg ? [] : await listOrgPlans(c.session);
   return (
     <div className="stack">
+      {!bg && (
+        <div className="card stack">
+          <h2 style={{ margin: 0 }}>Organization plans</h2>
+          <p className="muted small">Pro unlocks reports, raw evidence downloads, FixProof exports and audit exports. Changing a plan needs a recent MFA sign-in, is written to that organization&apos;s audit log and is announced to its admins.</p>
+          <TableWrap>
+            <table>
+              <thead><tr><th>Organization</th><th>Members</th><th>Created</th><th>Plan</th><th><span className="sr-only">Change plan</span></th></tr></thead>
+              <tbody>{orgPlans.map((o) => (
+                <tr key={o.id}>
+                  <td>{o.name}<div className="mono small muted">{o.slug}</div></td>
+                  <td>{o.members}</td>
+                  <td className="small nowrap">{fmt(o.createdAt)}</td>
+                  <td><span className={`badge${o.plan === "pro" ? " pro" : ""}`}>{o.plan === "pro" ? "Pro" : o.plan === "free" ? "Free" : o.plan}</span></td>
+                  <td>
+                    <ActionForm action={setOrgPlanAction} submit={o.plan === "pro" ? "Move to Free" : "Upgrade to Pro"} variant={o.plan === "pro" ? "secondary" : "primary"} className="row inline-form">
+                      <input type="hidden" name="orgSlug" value={o.slug} />
+                      <input type="hidden" name="plan" value={o.plan === "pro" ? "free" : "pro"} />
+                    </ActionForm>
+                  </td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </TableWrap>
+        </div>
+      )}
       {bg ? (
         <div className="card stack">
           <h2 style={{ margin: 0 }}>Active: {bg.org.name}</h2>

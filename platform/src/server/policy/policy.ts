@@ -2,7 +2,7 @@ import { withOrg } from "../db/client";
 import { audit } from "../audit/audit";
 import { AppError } from "../errors";
 import {
-  BREAK_GLASS_ACTIONS, grantFor, KILL_AI_ACTIONS, KILL_SCANNING_ACTIONS, MFA_REQUIRED_ROLES, STEP_UP_ACTIONS, TOKEN_SCOPE_ACTIONS,
+  BREAK_GLASS_ACTIONS, grantFor, KILL_AI_ACTIONS, KILL_SCANNING_ACTIONS, MFA_REQUIRED_ROLES, PRO_ACTIONS, STEP_UP_ACTIONS, TOKEN_SCOPE_ACTIONS,
   type Action, type Role, type TokenScope,
 } from "./matrix";
 
@@ -31,6 +31,15 @@ export interface Principal {
 export interface OrgFlags {
   killScanning: boolean;
   killAi: boolean;
+  /** "free" or "pro" (organizations from the pilot are "pro"). Pro unlocks PRO_ACTIONS. */
+  plan: string;
+}
+
+export const isProOrg = (org: Pick<OrgFlags, "plan">) => org.plan === "pro";
+
+/** For Pro-only steps that are not their own action (e.g. exporting a FixProof record). */
+export function assertPro(org: Pick<OrgFlags, "plan">) {
+  if (!isProOrg(org)) throw new AppError(402, "pro_required", "This is part of RuyaShield Pro.");
 }
 
 export interface Resource {
@@ -44,9 +53,9 @@ export interface Resource {
 
 export type Decision =
   | { allow: true; needsSecondPerson: boolean }
-  | { allow: false; status: 401 | 403 | 409 | 423; code: string };
+  | { allow: false; status: 401 | 402 | 403 | 409 | 423; code: string };
 
-const deny = (status: 401 | 403 | 409 | 423, code: string): Decision => ({ allow: false, status, code });
+const deny = (status: 401 | 402 | 403 | 409 | 423, code: string): Decision => ({ allow: false, status, code });
 
 /** Pure decision function: deny by default (RS-IAM-004). */
 export function decide(p: Principal, action: Action, r: Resource, org: OrgFlags, now = new Date()): Decision {
@@ -72,6 +81,7 @@ export function decide(p: Principal, action: Action, r: Resource, org: OrgFlags,
     return deny(403, "self_approval");
   }
 
+  if (PRO_ACTIONS.has(action) && !isProOrg(org)) return deny(402, "pro_required");
   if (org.killScanning && KILL_SCANNING_ACTIONS.has(action)) return deny(423, "kill_switch_engaged");
   if (org.killAi && KILL_AI_ACTIONS.has(action)) return deny(423, "kill_switch_engaged");
 

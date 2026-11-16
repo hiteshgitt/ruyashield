@@ -90,7 +90,7 @@ export const orgs = pgTable("orgs", {
   id: uuid("id").primaryKey(),
   name: text("name").notNull(),
   slug: text("slug").notNull(),
-  plan: text("plan").notNull().default("pilot"),
+  plan: text("plan").notNull().default("free"),
   region: text("region").notNull(),
   approverMustDiffer: boolean("approver_must_differ").notNull().default(true),
   aiEnabled: boolean("ai_enabled").notNull().default(false),

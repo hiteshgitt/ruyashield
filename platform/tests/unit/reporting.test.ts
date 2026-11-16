@@ -11,7 +11,7 @@ const now = new Date("2026-11-01T12:00:00Z");
 const p = (role: Role, extra: Partial<Principal> = {}): Principal => ({
   userId: "u1", orgId: "o1", role, restricted: false, clientGroupIds: [], mfa: true, authTime: now, ...extra,
 });
-const open = { killScanning: false, killAi: false };
+const open = { killScanning: false, killAi: false, plan: "pro" };
 
 describe("API token scopes", () => {
   it("allow only the actions their scopes list, even for an org admin", () => {

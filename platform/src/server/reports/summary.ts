@@ -50,7 +50,8 @@ export async function securitySummary(
   const p = c.principal;
   const action = opts.action ?? "dashboard.view";
   // Org-wide view: an "S" grant passes here and is narrowed by assetScope below.
-  if (!decide(p, action, { type: "org", ownerId: p.userId }, c.org).allow) throw forbidden();
+  const d = decide(p, action, { type: "org", ownerId: p.userId }, c.org);
+  if (!d.allow) throw d.status === 402 ? new AppError(402, d.code, "This is part of RuyaShield Pro.") : forbidden();
   await authorize(p, action, { type: "org", id: c.org.id, ownerId: p.userId }, c.org);
   const groupId = opts.clientGroupId || null;
   if (groupId && !isUuid(groupId)) throw new AppError(422, "invalid_filter", "Unknown client group.");

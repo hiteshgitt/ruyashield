@@ -16,7 +16,7 @@ export interface LoadedPrincipal {
 type OrgRow = typeof orgs.$inferSelect;
 function orgView(o: OrgRow): LoadedPrincipal["org"] {
   return {
-    id: o.id, name: o.name, slug: o.slug, killScanning: o.killScanning, killAi: o.killAi,
+    id: o.id, name: o.name, slug: o.slug, killScanning: o.killScanning, killAi: o.killAi, plan: o.plan,
     aiEnabled: o.aiEnabled, approverMustDiffer: o.approverMustDiffer,
     legalHold: o.legalHold, deletionRequestedAt: o.deletionRequestedAt,
   };

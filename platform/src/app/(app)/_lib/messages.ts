@@ -17,6 +17,7 @@ const MESSAGES: Record<string, string> = {
   login_failed: "Sign-in failed. Please try again.",
   login_unavailable: "Sign-in is not available right now.",
   quota_exceeded: "Your plan's assessment limit for this month is used up.",
+  pro_required: "This is part of RuyaShield Pro. Ask Ruya Lab to upgrade your organization.",
   check_prohibited: "That check is prohibited and can never run.",
   approval_required: "Intrusive checks need an approved request.",
   authorization_required: "This asset is not verified or authorized for the selected checks.",

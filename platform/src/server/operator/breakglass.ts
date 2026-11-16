@@ -16,7 +16,7 @@ export function isOperator(email: string, env = process.env.RUYA_OPERATOR_EMAILS
   return list.includes(email.trim().toLowerCase());
 }
 
-function requireOperator(s: SessionInfo, now: Date) {
+export function requireOperator(s: SessionInfo, now = new Date()) {
   if (!isOperator(s.email)) throw new AppError(403, "forbidden");
   if (!s.mfa || now.getTime() - s.authTime.getTime() > FRESH_AUTH_MS) throw new AppError(401, "step_up_required", "Sign in again with MFA to start support access.");
 }

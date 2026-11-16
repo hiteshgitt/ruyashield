@@ -7,7 +7,8 @@ import { ActionForm } from "../_components/ActionForm";
 import { verifyAuditChainAction } from "../actions";
 import { messageFor } from "../_lib/messages";
 import { fmt, pageOrg } from "../_lib/page";
-import { Empty, Loading, MetaChips, PageHeader } from "../_components/Page";
+import { Empty, Loading, MetaChips, PageHeader, ProNotice } from "../_components/Page";
+import { isProOrg } from "@/server/policy/policy";
 import { TableWrap } from "../_components/TableWrap";
 
 export default function AuditPage({ searchParams }: PageProps<"/audit">) {
@@ -46,7 +47,8 @@ async function Audit({ searchParams }: { searchParams: PageProps<"/audit">["sear
           <ActionForm action={verifyAuditChainAction} submit="Verify chain" pending="Verifying…" variant="secondary" />
           <p className="muted small">Recomputes every event hash and chain link for this organization and reports the first break, if any.</p>
         </div>
-        {canExport && (
+        {canExport && !isProOrg(c.org) && <div className="audit-export"><ProNotice>Exporting the audit log (CSV and JSON) is part of RuyaShield Pro.</ProNotice></div>}
+        {canExport && isProOrg(c.org) && (
           <div className="audit-export">
             <div className="row">
               <a className="button secondary" href={`/v1/audit/export?${qs({ format: "csv" })}`}>Export CSV</a>

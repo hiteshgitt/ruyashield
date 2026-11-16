@@ -16,6 +16,7 @@ import { nextStep, type NextStep } from "@/server/reports/nextStep";
 import { Icon } from "../_components/Icon";
 import { webmonitorCoverage, webmonitorAddSiteUrl, webmonitorUrl, type WebMonitorCoverage } from "@/server/webmonitor/watch";
 import { log } from "@/server/log";
+import { isProOrg } from "@/server/policy/policy";
 
 export default function DashboardPage({ searchParams }: PageProps<"/dashboard">) {
   return (
@@ -43,7 +44,7 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/dashboard
   // Uptime coverage is a side panel: if it fails, the security overview still renders.
   const coverage = await webmonitorCoverage(c).catch((e) => { log.error("dashboard.webmonitor", { error: e instanceof Error ? e.message : String(e) }); return null; });
   const canConnect = grantFor(c.principal.role, "token.manage") !== "N";
-  const canReport = grantFor(c.principal.role, "report.generate") !== "N";
+  const canReport = grantFor(c.principal.role, "report.generate") !== "N" && isProOrg(c.org);
   const days = s.windowDays;
   const sev = s.findings.open;
   const a = s.assessments;

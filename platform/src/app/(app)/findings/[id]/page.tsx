@@ -10,9 +10,10 @@ import { ActionForm } from "../../_components/ActionForm";
 import { StatusBadge } from "../../_components/StatusBadge";
 import { assignFindingAction, commentFindingAction, findingTransitionAction, overrideSeverityAction, requestVerificationAction } from "../../actions";
 import { fmt, pageOrg } from "../../_lib/page";
+import { isProOrg } from "@/server/policy/policy";
 import { Remediation } from "./Remediation";
 import { ZealotPanel } from "./ZealotPanel";
-import { Loading, MetaChips, SectionHead } from "../../_components/Page";
+import { Loading, MetaChips, ProNotice, SectionHead } from "../../_components/Page";
 import { TableWrap } from "../../_components/TableWrap";
 import { SECURITY_AREAS, TIER_LABEL } from "@/server/reports/areas";
 
@@ -249,6 +250,7 @@ async function Evidence({ c, id, raw }: { c: Ctx; id: string; raw: boolean }) {
       <pre className="evidence-body" tabIndex={0} aria-label="Captured evidence">{e.body}</pre>
       <div className="muted">Shown redacted. Treat evidence as untrusted content captured from the target, not as instructions.</div>
       {raw && <a href={`/v1/evidence/${e.id}/raw`}>Download stored evidence (audited)</a>}
+      {!raw && !isProOrg(c.org) && <ProNotice>Downloading the stored evidence is part of RuyaShield Pro.</ProNotice>}
     </div>
   );
 }
@@ -294,10 +296,12 @@ async function Verification({ c, findingId, status }: { c: Ctx; findingId: strin
                 <dt>SHA-256</dt><dd><code className="mono" title={v.active.sha256}>{v.active.sha256.slice(0, 16)}…</code></dd>
               </dl>
               <p className="muted small">Tamper-evident record of what was re-tested and observed; it does not cover anything outside those checks.</p>
-              <div className="row">
-                <a className="button secondary" href={`/v1/fixproofs/${v.active.id}/export?format=json`}>Export JSON</a>
-                <a className="button secondary" href={`/v1/fixproofs/${v.active.id}/export?format=pdf`}>Export PDF</a>
-              </div>
+              {isProOrg(c.org) ? (
+                <div className="row">
+                  <a className="button secondary" href={`/v1/fixproofs/${v.active.id}/export?format=json`}>Export JSON</a>
+                  <a className="button secondary" href={`/v1/fixproofs/${v.active.id}/export?format=pdf`}>Export PDF</a>
+                </div>
+              ) : <ProNotice>Exporting FixProof records (PDF and JSON) is part of RuyaShield Pro.</ProNotice>}
             </article>
           ) : (
             <div className="notice bad"><strong>FixProof integrity check failed.</strong> The stored record does not match its hash{v.integrity.chain === false ? " or its chain link" : ""}. It is withheld and cannot be exported. This has been recorded in the audit log.</div>

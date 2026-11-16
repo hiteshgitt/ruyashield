@@ -70,6 +70,9 @@ export const MFA_REQUIRED_ROLES: ReadonlySet<Role> = new Set<Role>(["org_admin",
 
 /** Actions blocked while the org scanning kill switch is engaged. */
 export const KILL_SCANNING_ACTIONS: ReadonlySet<Action> = new Set<Action>(["assessment.launch", "verification.request"]);
+/** Free organizations scan, triage and view; downloads (reports, raw evidence, audit export) are Pro. */
+export const PRO_ACTIONS: ReadonlySet<Action> = new Set<Action>(["report.generate", "evidence.download_raw", "audit.export"]);
+
 export const KILL_AI_ACTIONS: ReadonlySet<Action> = new Set<Action>(["ai.request"]);
 
 /** What each API token scope permits (FR-058). Tokens never carry write or admin actions. */

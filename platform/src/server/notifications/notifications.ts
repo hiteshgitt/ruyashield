@@ -28,6 +28,7 @@ export const NOTIFY_KINDS = {
   break_glass: { label: "Operator support access", securityCritical: true },
   org_deletion: { label: "Organization deletion requested or cancelled", securityCritical: true },
   attack_spike: { label: "Attack spike on an asset", securityCritical: true },
+  plan_changed: { label: "Organization plan changed", securityCritical: false },
 } as const satisfies Record<string, { label: string; securityCritical: boolean }>;
 export type NotifyKindAll = keyof typeof NOTIFY_KINDS;
 
