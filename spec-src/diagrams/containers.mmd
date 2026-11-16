@@ -1,0 +1,39 @@
+flowchart TB
+  subgraph Z1["Zone 1 - Public edge"]
+    WAF[CDN / WAF / TLS termination]
+  end
+  subgraph Z2["Zone 2 - Application (modular monolith)"]
+    WEB["Next.js web app + Route Handlers<br/>UI, REST API /api/v1"]
+    MOD["Domain modules: IAM, Assets, Scope, Assessments,<br/>Findings, AI Gateway, Remediation, Approvals,<br/>Verification, FixProof, WebMonitor, Reporting, Audit"]
+    POL["Authorization & Policy layer<br/>(RBAC + tenant + scope + action class)"]
+    OUTBOX["Transactional outbox relay"]
+  end
+  subgraph Z3["Zone 3 - Data"]
+    PG[("PostgreSQL<br/>RLS by org_id")]
+    S3[("Private object storage<br/>evidence, reports, FixProof exports")]
+    SM[("Secrets manager + KMS")]
+  end
+  subgraph Z4["Zone 4 - Async processing"]
+    Q[["Queues + DLQ<br/>assessment, ai, remediation, verification, sync"]]
+    SW["Scan workers<br/>(isolated tasks)"]
+    AIW["AI workers"]
+    VW["Verification workers<br/>(same check engine as scans)"]
+    SYNC["Integration sync worker<br/>(WebMonitor, repo status)"]
+  end
+  subgraph Z5["Zone 5 - Untrusted execution"]
+    SBX["Remediation sandbox<br/>ephemeral, no prod creds,<br/>egress deny-by-default"]
+  end
+  EG["Egress guard proxy<br/>DNS pinning, private/metadata IP block,<br/>scope allowlist, rate limits"]
+  WAF --> WEB --> MOD --> POL
+  MOD --> PG
+  MOD --> S3
+  MOD --> SM
+  MOD --> OUTBOX --> Q
+  Q --> SW & AIW & VW & SYNC
+  SW --> EG
+  VW --> EG
+  EG --> INTERNET[(Authorized targets)]
+  AIW --> LLMX[(AI provider)]
+  Q --> SBX
+  SBX -.->|artifacts only| S3
+  SW & AIW & VW & SYNC --> PG

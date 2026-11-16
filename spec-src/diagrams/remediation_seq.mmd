@@ -1,0 +1,29 @@
+sequenceDiagram
+  autonumber
+  actor Dev as Developer
+  actor Apr as Approver
+  participant App as RuyaShield API
+  participant Pol as Policy layer
+  participant AI as AI worker
+  participant SBX as Sandbox runner
+  participant Repo as Customer repo (integration)
+  participant Aud as Audit log
+  Dev->>App: POST /remediation-plans (finding_id)
+  App->>Pol: authorize(remediation.create)
+  App->>AI: generate plan / patch (redacted evidence)
+  AI-->>App: schema-validated proposal + evidence refs
+  App->>SBX: run tests on patch (no prod creds, deny egress)
+  SBX-->>App: test result + logs (artifacts)
+  App->>Aud: remediation.sandbox_tested
+  Dev->>App: POST /remediation-plans/{id}/approval-requests
+  App->>Apr: notification
+  Apr->>App: POST /approvals/{id}/decision (approve, patch_sha256)
+  App->>Pol: approver != requester, role, MFA fresh, plan unchanged
+  Pol-->>App: allowed
+  App->>Aud: approval.decided (approved)
+  App->>Repo: open branch + pull request (no merge permission)
+  Repo-->>App: PR URL
+  App->>Aud: change.submitted
+  Note over Repo: Customer merges & deploys<br/>outside RuyaShield
+  Repo-->>App: webhook / poll: merged
+  App->>Aud: change.merged_observed

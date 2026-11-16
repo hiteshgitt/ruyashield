@@ -1,0 +1,16 @@
+/* Shared brand tokens for the public site (.site) and the signed-in app (.app).
+ * Only values that are identical in both themes live here; surfaces, secondary text, radii and glow strength
+ * differ on purpose and stay in site.css / app.css. Imported once by the root layout. */
+.site, .app {
+  --text: #ecebf3;
+  --line: rgba(236, 235, 243, .08);
+  --line-2: rgba(236, 235, 243, .14);
+  --violet: #8b5cf6;
+  --violet-2: #a78bfa;
+  --violet-3: #c4b5fd;
+  --amber: #f5b14c;
+  /* Primary-button gradient: white text stays >= 4.5:1 across it (4.8:1 at the top, 7.1:1 at the bottom). */
+  --btn-top: #8250f2;
+  --btn-bottom: #6d28d9;
+  --ease: cubic-bezier(.2, .7, .2, 1);
+}

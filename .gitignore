@@ -1,0 +1,13 @@
+# Local binaries (fetched per machine, too large for git): openssl-legacy, syft
+platform/bin/
+# Scanner test fixtures with their own git history
+platform/dev-repos/
+# Secrets: never commit real env files
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+# Office lock files
+~$*

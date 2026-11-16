@@ -1,0 +1,23 @@
+stateDiagram-v2
+  [*] --> draft
+  draft --> proposed: plan generated / written
+  proposed --> sandbox_testing: patch-type plan
+  sandbox_testing --> test_passed
+  sandbox_testing --> test_failed
+  test_failed --> proposed: revise
+  proposed --> awaiting_approval: guided plan
+  test_passed --> awaiting_approval
+  awaiting_approval --> approved
+  awaiting_approval --> rejected
+  awaiting_approval --> proposed: plan edited (approval invalidated)
+  approved --> change_submitted: PR opened (patch plans)
+  approved --> applied_by_customer: guided plan, owner marks applied
+  change_submitted --> merged_observed
+  change_submitted --> closed_unmerged
+  merged_observed --> verifying
+  applied_by_customer --> verifying
+  verifying --> completed: FixProof verified
+  verifying --> remediation_failed: verification failed
+  remediation_failed --> proposed
+  rejected --> [*]
+  closed_unmerged --> [*]

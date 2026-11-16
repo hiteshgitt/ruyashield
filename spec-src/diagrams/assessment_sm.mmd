@@ -1,0 +1,13 @@
+stateDiagram-v2
+  [*] --> draft
+  draft --> queued: launch (authz + quota pass)
+  draft --> rejected: authz/scope/quota fail
+  queued --> running: worker lease
+  queued --> cancelled: user cancel
+  running --> completed: all checks done
+  running --> completed_with_errors: some checks failed/timed out
+  running --> failed: no check completed / authorization expired
+  running --> cancelling: user cancel
+  cancelling --> cancelled
+  running --> timed_out: assessment budget exceeded
+  running --> queued: worker lost, lease expired (retry <= 2)

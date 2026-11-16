@@ -1,0 +1,11 @@
+/*
+ * Proportional desktop scaling for the public site (rule file §3).
+ * 1024–1199: hold the 1200 scale. 1200 and up: an exact scaled copy of the 1920 design.
+ * Below 1024 the root stays at the browser's 16px and sections stack.
+ */
+@media screen and (min-width: 64rem) and (max-width: 74.9988rem) {
+  html:has([data-site="marketing"]) { font-size: 10px; }
+}
+@media screen and (min-width: 75rem) {
+  html:has([data-site="marketing"]) { font-size: calc(16 / 1920 * 100vw); }
+}

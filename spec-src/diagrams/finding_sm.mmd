@@ -1,0 +1,19 @@
+stateDiagram-v2
+  [*] --> new
+  new --> triaged: analyst triage
+  new --> false_positive: analyst + justification
+  triaged --> confirmed: deterministic check or analyst validation
+  triaged --> false_positive
+  triaged --> accepted_risk: security_lead + expiry
+  confirmed --> in_remediation: plan created / owner assigned
+  confirmed --> accepted_risk
+  in_remediation --> fix_pending_verification: change applied (guided) or merge observed
+  fix_pending_verification --> resolved_verified: verification passed (system only)
+  fix_pending_verification --> reopened: verification failed (system)
+  fix_pending_verification --> fix_pending_verification: inconclusive / error
+  resolved_verified --> reopened: regression detected
+  reopened --> in_remediation
+  accepted_risk --> triaged: expiry reached (system)
+  false_positive --> triaged: re-detected with new evidence
+  new --> stale: not observed in N completed runs
+  stale --> new: observed again

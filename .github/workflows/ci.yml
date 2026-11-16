@@ -1,0 +1,51 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: platform
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: ruya_owner
+          POSTGRES_PASSWORD: ruya_owner_dev
+          POSTGRES_DB: ruyashield
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U ruya_owner -d ruyashield"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_OWNER_URL: postgres://ruya_owner:ruya_owner_dev@localhost:5432/ruyashield
+      DATABASE_URL: postgres://ruya_app:ruya_app_dev@localhost:5432/ruyashield
+      APP_URL: http://localhost:3200
+      JOB_TOKEN_SECRET: ci-only-job-token-secret-not-for-production-use
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: platform/package-lock.json
+      - run: npm ci
+      - run: npm audit --audit-level=high
+      - run: npm run typecheck
+      - run: npm run lint
+      - name: Create runtime role (non-owner, NOBYPASSRLS)
+        run: psql "$DATABASE_OWNER_URL" -v ON_ERROR_STOP=1 -f infra/postgres-init.sql
+      - run: npm run migrate
+      - name: Unit and database tests
+        run: npx vitest run
+      - name: Production build
+        run: npm run build

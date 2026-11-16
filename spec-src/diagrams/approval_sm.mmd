@@ -1,0 +1,8 @@
+stateDiagram-v2
+  [*] --> pending
+  pending --> approved: eligible approver
+  pending --> rejected: eligible approver + reason
+  pending --> expired: TTL (default 7 days)
+  pending --> invalidated: plan/patch hash changed
+  approved --> revoked: before change submitted
+  approved --> consumed: change submitted

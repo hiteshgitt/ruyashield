@@ -1,0 +1,27 @@
+sequenceDiagram
+  autonumber
+  actor U as Analyst / Developer
+  participant App as RuyaShield API
+  participant VW as Verification worker
+  participant EG as Egress guard
+  participant T as Authorized asset
+  participant FP as FixProof module
+  participant Aud as Audit log
+  U->>App: POST /verification-runs (finding_id)
+  App->>App: authorization valid? check supports verification?
+  App->>VW: enqueue verification (same check id + version)
+  VW->>EG: scoped request
+  EG->>T: deterministic re-test
+  T-->>VW: response
+  VW-->>App: result: passed | failed | inconclusive | error
+  alt passed
+    App->>FP: assemble record (original evidence, approved change, before/after, tool versions)
+    FP->>FP: canonical JSON -> SHA-256 content hash
+    FP->>Aud: fixproof.issued (hash chained)
+  else failed
+    App->>App: finding -> reopened
+    App->>Aud: finding.reopened
+  else inconclusive or error
+    App->>App: finding stays fix_pending_verification
+    App->>Aud: verification.inconclusive
+  end

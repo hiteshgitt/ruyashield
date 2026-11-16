@@ -1,0 +1,22 @@
+flowchart LR
+  subgraph UNTRUSTED["Untrusted"]
+    I1[Internet users]
+    I2[Target website content / responses]
+    I3[Repository content]
+    I4[WebMonitor payloads]
+    I5[AI model output]
+  end
+  subgraph TRUSTED["RuyaShield control plane"]
+    P[Policy layer] --> D[(Database)]
+  end
+  subgraph CONTAINED["Contained execution"]
+    W[Scan / verification workers]
+    S[Sandbox runner]
+  end
+  I1 -->|TB1: authN + authZ + rate limit| P
+  I4 -->|TB2: signature + schema + replay check| P
+  I5 -->|TB3: schema validation, no tool execution| P
+  I2 -->|TB4: parsed as data, size caps| W
+  I3 -->|TB5: executed only in sandbox| S
+  P -->|signed job, scoped| W
+  W -->|egress guard| I2

@@ -1,0 +1,12 @@
+{
+  "artifacts": [
+    { "name": "libssl3", "version": "3.0.11-1~deb12u1", "type": "deb", "metadata": { "source": "openssl", "sourceVersion": "3.0.11-1~deb12u1" } },
+    { "name": "openssl", "version": "3.0.11-1~deb12u1", "type": "deb", "metadata": {} },
+    { "name": "bash", "version": "5.2.15-2+b2", "type": "deb", "metadata": { "source": "bash", "sourceVersion": "5.2.15-2" } },
+    { "name": "lodash", "version": "4.17.15", "type": "npm", "metadata": {} },
+    { "name": "myapp", "version": "(devel)", "type": "go-module" },
+    { "name": "weird", "version": "1.0", "type": "binary" }
+  ],
+  "distro": { "id": "debian", "versionID": "12", "prettyName": "Debian GNU/Linux 12 (bookworm)" },
+  "descriptor": { "name": "syft", "version": "1.55.0" }
+}

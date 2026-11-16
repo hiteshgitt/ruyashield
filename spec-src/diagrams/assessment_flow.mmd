@@ -1,0 +1,18 @@
+flowchart LR
+  A[User creates assessment] --> B{Policy layer:<br/>role, tenant, asset<br/>authorization valid?}
+  B -- no --> X1[Reject 403/409<br/>audit: assessment.denied]
+  B -- yes --> C{Checks allowed<br/>by action class,<br/>quota, kill switch?}
+  C -- no --> X2[Reject 422/429<br/>audit]
+  C -- yes --> D[Persist assessment = queued<br/>+ outbox event]
+  D --> E[Scan worker leases job]
+  E --> F[Re-check authorization<br/>at execution time]
+  F -- expired --> X3[Abort: failed - authorization_expired]
+  F -- ok --> G[Resolve targets via egress guard<br/>block private/metadata IPs, out-of-scope]
+  G --> H[Run checks with per-check<br/>timeout + request budget]
+  H --> I[Store raw output as evidence<br/>SHA-256 hashed]
+  I --> J[Normalize -> fingerprint -> dedup]
+  J --> K[Findings + occurrences]
+  K --> L{All checks<br/>completed?}
+  L -- yes --> M[completed]
+  L -- partial --> N[completed_with_errors<br/>coverage gaps listed]
+  L -- none --> O[failed]

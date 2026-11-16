@@ -1,0 +1,8 @@
+stateDiagram-v2
+  [*] --> scheduled
+  scheduled --> running
+  scheduled --> not_run: cancelled / authorization expired / unsupported
+  running --> passed: check passes with evidence
+  running --> failed: issue still observed
+  running --> inconclusive: target unreachable, partial, ambiguous
+  running --> error: tool/infra error

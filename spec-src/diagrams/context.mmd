@@ -1,0 +1,25 @@
+flowchart LR
+  subgraph Users["Customer organization"]
+    ADM[Org admin]
+    SEC[Security lead / analyst]
+    DEV[Developer / remediation owner]
+    APR[Approver]
+    RO[Read-only stakeholder]
+  end
+  RS(("RuyaShield<br/>(SaaS)"))
+  WM["WebMonitor<br/>(related RuyaLab product)"]
+  TGT["Authorized customer assets<br/>(websites / APIs)"]
+  REPO["Customer code repository<br/>(provider TBD, D-06)"]
+  IDP["Identity provider<br/>(established provider, D-04)"]
+  LLM["AI model provider<br/>(via provider-agnostic adapter)"]
+  SCN["Established scanner engine<br/>(D-01)"]
+  MAIL["Email delivery service"]
+  ADM & SEC & DEV & APR & RO -->|HTTPS| RS
+  RS -->|OIDC| IDP
+  WM -->|referral + minimal context| RS
+  RS -.->|result linkage P1| WM
+  RS -->|scoped, rate-limited checks via egress guard| TGT
+  RS -->|read code, open PR after approval| REPO
+  RS -->|redacted, schema-bound prompts| LLM
+  RS --- SCN
+  RS -->|notifications| MAIL
