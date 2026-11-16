@@ -314,19 +314,25 @@ function Agencies() {
   );
 }
 
+const WEBMONITOR_URL = "https://webmonitor.ruyalab.com";
+
 function WebMonitor() {
   return (
-    <section className="section wrap" aria-labelledby="webmonitor-title">
+    <section id="webmonitor" className="section wrap" aria-labelledby="webmonitor-title">
       <Reveal className="handoff">
         <div>
-          <span className="eyebrow">WebMonitor handoff</span>
-          <h2 id="webmonitor-title" className="display" style={{ marginTop: "1.25rem", fontSize: "var(--fs-title)" }}>Uptime problems go to WebMonitor &mdash; only with consent.</h2>
-          <p className="lead" style={{ marginTop: "1rem", fontSize: "1.0625rem" }}>When a finding is about availability rather than security, RuyaShield can offer a referral to WebMonitor. It never launches anything on its own, and only a status and a link come back.</p>
+          <span className="eyebrow">Works with WebMonitor</span>
+          <h2 id="webmonitor-title" className="display" style={{ marginTop: "1.25rem", fontSize: "var(--fs-title)" }}>Security from RuyaShield. Uptime from WebMonitor. One view of every site.</h2>
+          <p className="lead" style={{ marginTop: "1rem", fontSize: "1.0625rem" }}>WebMonitor, also by Ruya Lab, checks every minute that your sites are up and fast. Connect it with a one-click read-only token and each site&apos;s RuyaShield findings appear next to its uptime, on the web and in the Android app.</p>
+          <div className="hero-cta" style={{ marginTop: "1.5rem" }}>
+            <a className="btn btn-primary btn-lg" href={WEBMONITOR_URL} target="_blank" rel="noopener noreferrer">Try WebMonitor free</a>
+            <a className="btn btn-ghost btn-lg" href="/settings/webmonitor">Connect your account</a>
+          </div>
         </div>
         <ol className="handoff-steps">
-          <li><span className="mono">01</span><b>Offer</b><p>The finding suggests a referral.</p></li>
-          <li><span className="mono">02</span><b>Consent</b><p>A person agrees before anything is shared.</p></li>
-          <li><span className="mono">03</span><b>Status</b><p>Only the referral status and a link return.</p></li>
+          <li><span className="mono">01</span><b>Findings beside uptime</b><p>Open findings by severity and the latest assessment on each monitored site.</p></li>
+          <li><span className="mono">02</span><b>Alerts that matter</b><p>WebMonitor alerts you when RuyaShield finds a new critical or high issue.</p></li>
+          <li><span className="mono">03</span><b>Scan on request</b><p>&quot;Scan in RuyaShield&quot; sends a signed referral. Nothing runs until a member accepts it here.</p></li>
         </ol>
       </Reveal>
     </section>

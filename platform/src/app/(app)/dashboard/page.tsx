@@ -14,6 +14,8 @@ import { TableWrap } from "../_components/TableWrap";
 import { AreaBoard, AssetMap, ScoreGauge, SeverityDonut, StatCard, TrendChart } from "../_components/Charts";
 import { nextStep, type NextStep } from "@/server/reports/nextStep";
 import { Icon } from "../_components/Icon";
+import { webmonitorCoverage, webmonitorAddSiteUrl, webmonitorUrl, type WebMonitorCoverage } from "@/server/webmonitor/watch";
+import { log } from "@/server/log";
 
 export default function DashboardPage({ searchParams }: PageProps<"/dashboard">) {
   return (
@@ -38,6 +40,9 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/dashboard
     throw e;
   }
   const groups = await listClientGroups(c);
+  // Uptime coverage is a side panel: if it fails, the security overview still renders.
+  const coverage = await webmonitorCoverage(c).catch((e) => { log.error("dashboard.webmonitor", { error: e instanceof Error ? e.message : String(e) }); return null; });
+  const canConnect = grantFor(c.principal.role, "token.manage") !== "N";
   const canReport = grantFor(c.principal.role, "report.generate") !== "N";
   const days = s.windowDays;
   const sev = s.findings.open;
@@ -109,6 +114,8 @@ async function Dashboard({ searchParams }: { searchParams: PageProps<"/dashboard
         <p className="small muted">Each area links to its open findings. &quot;Not run yet&quot; means no result yet, which is not a pass. &quot;Not scanned by RuyaShield yet&quot; means we do not cover that area today.</p>
         <AreaBoard areas={ins.areas} />
       </section>
+
+      {coverage && coverage.assets.length > 0 && <UptimeCard coverage={coverage} canConnect={canConnect} />}
 
       <div className="dash-wide">
         <section className="card panel" aria-labelledby="trend-h">
@@ -210,6 +217,51 @@ function NextStepCard({ step }: { step: NextStep }) {
       <h3 className="next-title">{step.title}</h3>
       <p className="small next-detail">{step.detail}</p>
       <Link className="button" href={step.href}>{step.cta} →</Link>
+    </section>
+  );
+}
+
+const UPTIME_LIST = 5;
+
+/** Which assets WebMonitor watches for uptime, with one-click links for the ones it does not. */
+function UptimeCard({ coverage, canConnect }: { coverage: WebMonitorCoverage; canConnect: boolean }) {
+  const total = coverage.assets.length;
+  const unwatched = coverage.assets.filter((a) => !a.watched && a.status === "verified");
+  const watched = coverage.assets.filter((a) => a.watched).length;
+  const connected = !!coverage.lastSeenAt;
+  return (
+    <section className="card panel uptime-card" aria-labelledby="uptime-h">
+      <div className="uptime-head">
+        <div>
+          <p className="next-kicker"><Icon name="monitor" /> Uptime, from WebMonitor</p>
+          <h3 id="uptime-h">{connected ? `${watched} of ${total} site${total === 1 ? "" : "s"} watched for downtime` : "Know when a site goes down, not just when it is vulnerable"}</h3>
+          <p className="small muted">
+            {connected
+              ? <>WebMonitor last checked in {fmt(coverage.lastSeenAt)}. It shows these findings next to uptime and alerts on new critical and high ones.</>
+              : <>RuyaShield finds security issues; WebMonitor checks every minute that your sites are up and fast. Connected, each site&apos;s findings appear next to its uptime, with alerts on new critical and high issues.</>}
+          </p>
+        </div>
+        {connected
+          ? (canConnect && <Link className="button secondary" href="/settings/webmonitor">Manage →</Link>)
+          : canConnect
+            ? <Link className="button" href="/settings/webmonitor">Connect WebMonitor →</Link>
+            : <a className="button secondary" href={webmonitorUrl("/")} target="_blank" rel="noopener noreferrer">About WebMonitor →</a>}
+      </div>
+      {connected && unwatched.length > 0 && (
+        <ul className="uptime-list small">
+          {unwatched.slice(0, UPTIME_LIST).map((a) => (
+            <li key={a.id}><span className="mono">{a.host}</span><span className="badge warn">not watched</span><a href={webmonitorAddSiteUrl(a.host)} target="_blank" rel="noopener noreferrer">Watch in WebMonitor →</a></li>
+          ))}
+          {unwatched.length > UPTIME_LIST && canConnect && <li><Link href="/settings/webmonitor">{unwatched.length - UPTIME_LIST} more →</Link></li>}
+        </ul>
+      )}
+      {coverage.notInRuyaShield.length > 0 && (
+        <p className="small">
+          {coverage.notInRuyaShield.length} site{coverage.notInRuyaShield.length === 1 ? " WebMonitor monitors is" : "s WebMonitor monitors are"} not scanned by RuyaShield yet
+          {" "}(<span className="mono">{coverage.notInRuyaShield.slice(0, 3).join(", ")}{coverage.notInRuyaShield.length > 3 ? ", …" : ""}</span>).
+          {" "}<Link href={`/assets?host=${encodeURIComponent(coverage.notInRuyaShield[0])}`}>Add {coverage.notInRuyaShield.length === 1 ? "it" : "the first"} →</Link>
+        </p>
+      )}
     </section>
   );
 }

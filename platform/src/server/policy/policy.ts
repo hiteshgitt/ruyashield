@@ -22,6 +22,8 @@ export interface Principal {
   requestId?: string | null;
   /** Set when the request authenticated with an API token: the token can do no more than these scopes allow. */
   tokenScopes?: readonly TokenScope[];
+  /** The API token's id, when the request authenticated with one. */
+  tokenId?: string;
   /** Set for an operator's time-boxed support session: read-only, never a member (RS-PLAT-007). */
   breakGlassId?: string;
 }

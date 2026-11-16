@@ -11,16 +11,19 @@ import { fmt, pageOrg } from "../_lib/page";
 import { Empty, Loading, MetaChips, PageHeader } from "../_components/Page";
 import { TableWrap } from "../_components/TableWrap";
 
-export default function AssetsPage() {
+export default function AssetsPage({ searchParams }: PageProps<"/assets">) {
   return (
     <>
       <PageHeader title="Assets" lead="Only verified assets, or assets covered by a recorded authorization, can be assessed." />
-      <Suspense fallback={<Loading />}><Assets /></Suspense>
+      <Suspense fallback={<Loading />}><Assets searchParams={searchParams} /></Suspense>
     </>
   );
 }
 
-async function Assets() {
+async function Assets({ searchParams }: { searchParams: PageProps<"/assets">["searchParams"] }) {
+  const sp = await searchParams;
+  // ?host= fills in the add form, for links from WebMonitor ("Add in RuyaShield").
+  const prefill = typeof sp.host === "string" ? sp.host.trim().slice(0, 253) : "";
   const c = await pageOrg("/assets");
   const [assets, groups, suggestions] = await Promise.all([listAssets(c), listClientGroups(c), listSuggestions(c)]);
   const hostOf = new Map(assets.map((a) => [a.id, a.host]));
@@ -84,7 +87,7 @@ async function Assets() {
         <section className="card split-side" aria-labelledby="add-asset">
           <h2 id="add-asset">Add an asset</h2>
           <ActionForm action={addAssetAction} submit="Add asset">
-            <label>Hostname<input type="text" name="host" required placeholder="app.example.com" /></label>
+            <label>Hostname<input type="text" name="host" required placeholder="app.example.com" defaultValue={prefill} autoFocus={!!prefill} /></label>
             <label>Display name (optional)<input type="text" name="displayName" maxLength={80} /></label>
             <label>Environment<select name="environment" defaultValue="production">
               <option value="production">Production</option><option value="staging">Staging</option><option value="development">Development</option>

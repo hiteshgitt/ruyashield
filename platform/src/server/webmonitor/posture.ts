@@ -5,6 +5,7 @@ import { AppError, forbidden } from "../errors";
 import { decide, type OrgFlags, type Principal, type Resource } from "../policy/policy";
 import { OPEN_STATUSES } from "../findings/lifecycle";
 import { parseHost } from "../assets/host";
+import { recordWatchedHosts } from "./watch";
 
 // Read model for the WebMonitor "connect account" integration: per-host security status for the sites a
 // WebMonitor user monitors. Called with a read-only API token (assets:read + findings:read). Only counts,
@@ -54,6 +55,8 @@ export async function hostPosture(c: Ctx, hosts: string[], now = new Date()): Pr
   if (!hosts.length) return { org: { name: orgName }, generatedAt: now, hosts: [] };
 
   return withOrg(c.org.id, async (tx) => {
+    // WebMonitor sends every site it monitors; remember them so RuyaShield can show uptime coverage.
+    if (p.tokenId) await recordWatchedHosts(tx, c.org.id, p.tokenId, hosts, now);
     const rows = await tx.select().from(assets).where(and(eq(assets.kind, "domain"), inArray(assets.host, hosts)));
     const res = (a: typeof rows[number]): Resource => ({ type: "asset", id: a.id, clientGroupId: a.clientGroupId, ownerId: a.createdBy });
     const visible = rows.filter((a) => decide(p, "asset.view", res(a), c.org).allow);

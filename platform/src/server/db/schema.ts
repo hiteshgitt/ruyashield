@@ -808,6 +808,14 @@ export const apiTokens = pgTable("api_tokens", {
   lastUsedAt: ts("last_used_at"),
 });
 
+export const webmonitorWatchedHosts = pgTable("webmonitor_watched_hosts", {
+  orgId: uuid("org_id").notNull(),
+  host: text("host").notNull(),
+  tokenId: uuid("token_id"),
+  firstSeenAt: ts("first_seen_at").notNull().defaultNow(),
+  lastSeenAt: ts("last_seen_at").notNull().defaultNow(),
+}, (t) => [primaryKey({ columns: [t.orgId, t.host] })]);
+
 export const breakGlassSessions = pgTable("break_glass_sessions", {
   id: uuid("id").primaryKey().defaultRandom(),
   orgId: uuid("org_id").notNull(),

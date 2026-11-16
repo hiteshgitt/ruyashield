@@ -87,5 +87,5 @@ export async function resolveApiToken(
   const loaded = await loadPrincipal(session, t.org_id, meta);
   if (!loaded) return null;
   await withOrg(t.org_id, (tx) => tx.update(apiTokens).set({ lastUsedAt: now }).where(eq(apiTokens.id, t.id)));
-  return { ...loaded, principal: { ...loaded.principal, tokenScopes: t.scopes as TokenScope[] } };
+  return { ...loaded, principal: { ...loaded.principal, tokenScopes: t.scopes as TokenScope[], tokenId: t.id } };
 }

@@ -46,6 +46,7 @@ export async function AppChrome() {
       ...(can("members.manage") ? [{ href: "/settings/members", label: "Members", icon: "members" as const }] : []),
       ...(can("integration.manage") ? [{ href: "/settings/integrations", label: "Repositories", icon: "repos" as const }] : []),
       ...(can("token.manage") ? [{ href: "/settings/tokens", label: "API tokens", icon: "tokens" as const }] : []),
+      ...(can("token.manage") ? [{ href: "/settings/webmonitor", label: "WebMonitor", icon: "monitor" as const }] : []),
       ...(can("retention.manage") ? [{ href: "/settings/organization", label: "Organization", icon: "org" as const }] : []),
       ...(can("killswitch.manage") ? [{ href: "/settings/safety", label: "Safety", icon: "safety" as const }] : []),
       ...(can("audit.view") ? [{ href: "/audit", label: "Audit log", icon: "audit" as const }] : []),

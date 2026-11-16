@@ -641,6 +641,14 @@ html:has(.app) body { background: #0b0a10; color: #ecebf3; margin: 0; }
 .app .next-step.tone-bad { --tone: var(--bad); } .app .next-step.tone-warn { --tone: var(--warn); } .app .next-step.tone-ok { --tone: var(--ok); } .app .next-step.tone-violet { --tone: var(--violet-2); }
 .app .next-kicker { display: flex; align-items: center; gap: .375rem; margin: 0; font-family: var(--font-mono), monospace; font-size: .6875rem; letter-spacing: .1em; text-transform: uppercase; color: var(--tone); }
 .app .next-kicker .icon { width: 1rem; height: 1rem; }
+.app .uptime-card { --tone: var(--ok); display: flex; flex-direction: column; gap: .75rem; }
+.app .uptime-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: .75rem 1.5rem; }
+.app .uptime-head > div { flex: 1 1 22rem; min-width: 0; display: flex; flex-direction: column; gap: .375rem; }
+.app .uptime-head h3 { margin: 0; }
+.app .uptime-head p { margin: 0; }
+.app .uptime-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .375rem; }
+.app .uptime-list li { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.app .uptime-list li a { margin-left: auto; }
 .app .next-title { margin: 0; font-size: 1.375rem; line-height: 1.2; }
 .app .next-detail { margin: 0; color: var(--text-2); flex: 1; }
 .app .next-step .button { align-self: flex-start; }

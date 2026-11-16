@@ -23,6 +23,7 @@ import { generateReport } from "@/server/reports/reports";
 import * as notifySvc from "@/server/notifications/notifications";
 import * as lifecycleSvc from "@/server/orgs/lifecycle";
 import * as tokenSvc from "@/server/tokens/tokens";
+import { createWebMonitorToken } from "@/server/webmonitor/watch";
 import * as breakGlassSvc from "@/server/operator/breakglass";
 import { allowPrivateFromEnv } from "@/server/net/egress";
 import { AppError } from "@/server/errors";
@@ -568,6 +569,13 @@ export async function createTokenAction(_: ActionState, f: FormData): Promise<Ac
     const t = await tokenSvc.createApiToken(await requireOrgContext(), {
       name: str(f, "name"), scopes: f.getAll("scopes").filter((v) => typeof v === "string"), days: Number(str(f, "days") || "0"),
     });
+    return { ok: `Token created; it expires ${t.expiresAt.toISOString().slice(0, 10)}. Copy it now: it is not shown again.`, tone: "warn", secret: t.token };
+  });
+}
+
+export async function createWebMonitorTokenAction(_: ActionState): Promise<ActionState> {
+  return run(async () => {
+    const t = await createWebMonitorToken(await requireOrgContext());
     return { ok: `Token created; it expires ${t.expiresAt.toISOString().slice(0, 10)}. Copy it now: it is not shown again.`, tone: "warn", secret: t.token };
   });
 }

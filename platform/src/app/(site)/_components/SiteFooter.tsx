@@ -27,6 +27,7 @@ export function SiteFooter() {
           <h2>Account</h2>
           <a href="/auth/login">Sign in</a>
           <a href="/orgs">Organizations</a>
+          <a href="https://webmonitor.ruyalab.com" target="_blank" rel="noopener noreferrer">WebMonitor by Ruya Lab ↗</a>
         </nav>
       </div>
       <div className="site-footer-bottom">
