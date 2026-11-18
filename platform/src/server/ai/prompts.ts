@@ -77,6 +77,8 @@ export interface Bundle {
   checks: { id: string; title: string; description: string; retestSupported: boolean }[];
   /** Chat only: the user's question and earlier turns, redacted. */
   conversation?: { question: string; earlierTurns: { question: string; answer: string }[] };
+  /** What the affected site runs (from the technology check), so advice fits the stack. Context, not evidence. */
+  site?: { technologies: { name: string; category: string; version: string | null }[] };
 }
 export interface ChatInput { question: string; history?: { question: string; answer: string | null }[] }
 export interface BuiltBundle {
@@ -92,7 +94,7 @@ const clip = (s: string) => (s.length > MAX_EVIDENCE_CHARS ? `${s.slice(0, MAX_E
 const redactValue = (v: unknown): unknown => redactForAi(JSON.stringify(v ?? {}), "application/json");
 
 /** Builds the redacted, size-capped bundle the model sees, and its provenance. Pure. */
-export function buildBundle(f: BundleFinding, evidence: BundleEvidence[], checks: BundleCheck[], chat?: ChatInput): BuiltBundle {
+export function buildBundle(f: BundleFinding, evidence: BundleEvidence[], checks: BundleCheck[], chat?: ChatInput, site?: Bundle["site"]): BuiltBundle {
   const items = evidence.slice(0, MAX_EVIDENCE_ITEMS);
   const bundle: Bundle = {
     finding: {
@@ -102,6 +104,9 @@ export function buildBundle(f: BundleFinding, evidence: BundleEvidence[], checks
     evidence: items.map((e, i) => ({ label: `E${i + 1}`, contentType: e.contentType, body: clip(redactForAi(e.body, e.contentType)) })),
     checks: checks.map((d) => ({ id: d.id, title: d.title, description: d.description, retestSupported: d.verificationSupported })),
   };
+  if (site?.technologies.length) {
+    bundle.site = { technologies: site.technologies.slice(0, 20).map((t) => ({ name: redactForAi(t.name), category: t.category, version: t.version })) };
+  }
   if (chat) {
     bundle.conversation = {
       question: redactForAi(chat.question.slice(0, MAX_QUESTION_CHARS)),

@@ -8,6 +8,7 @@ import { createSecretsAdapter } from "./secrets";
 import { createExposedServicesAdapter } from "./ports";
 import { createSastAdapter } from "./sast";
 import { createIacAdapter } from "./iac";
+import { createTechnologyAdapter } from "./technology";
 import { createBlocklistAdapter } from "./blocklist";
 import { createCtAdapter } from "./ct";
 import { createTlsConfigAdapter } from "./tlsconfig";
@@ -31,7 +32,7 @@ import { createTakeoverAdapter } from "./takeover";
 // 0.13.0: code.iac (Terraform/Kubernetes/Compose/Dockerfile/GitHub Actions misconfigurations), web.blocklist (Safe Browsing, URLhaus);
 // 0.12.0: http.compromise (passive signs of injected scripts, miners, SEO spam, cloaking), http.cors, dns.takeover;
 //         http.security_headers reads at most 512 bytes of body.
-export const ENGINE_VERSION = "ruya-checks/0.13.0";
+export const ENGINE_VERSION = "ruya-checks/0.14.0";
 
 export interface CheckContext {
   host: string;
@@ -281,4 +282,4 @@ const caa: CheckAdapter = {
 };
 
 /** The executable catalogue. Anything not listed here cannot run, whatever the database says. */
-export const ADAPTERS: ReadonlyMap<string, CheckAdapter> = new Map([tls, headers, email, caa, osv, secrets, createSastAdapter(), createExposedServicesAdapter(), createCtAdapter(), createTlsConfigAdapter(), createExposureAdapter(), createContainerImageAdapter(), createCompromiseAdapter(), createCorsAdapter(), createTakeoverAdapter(), createIacAdapter(), createBlocklistAdapter()].map((a) => [a.id, a]));
+export const ADAPTERS: ReadonlyMap<string, CheckAdapter> = new Map([tls, headers, email, caa, osv, secrets, createSastAdapter(), createExposedServicesAdapter(), createCtAdapter(), createTlsConfigAdapter(), createExposureAdapter(), createContainerImageAdapter(), createCompromiseAdapter(), createCorsAdapter(), createTakeoverAdapter(), createIacAdapter(), createBlocklistAdapter(), createTechnologyAdapter()].map((a) => [a.id, a]));

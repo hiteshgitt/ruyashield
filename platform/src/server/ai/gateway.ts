@@ -9,6 +9,7 @@ import { audit } from "../audit/audit";
 import { AppError, isAppError, notFound } from "../errors";
 import { authorize, decide, type OrgFlags, type Principal, type Resource } from "../policy/policy";
 import { log } from "../log";
+import { assetTechnologies } from "../assets/technology";
 import { AI_REDACTION_VERSION, containsSecret } from "./redact";
 import { randomUUID } from "node:crypto";
 import { buildBundle, buildMessages, MAX_EVIDENCE_ITEMS, MAX_HISTORY_TURNS, MAX_OUTPUT_TOKENS, MAX_QUESTION_CHARS, MAX_THREAD_TURNS, PROMPTS, SCHEMA_VERSION, templateSha256, type BuiltBundle, type ChatInput, type ChatMessage } from "./prompts";
@@ -63,11 +64,13 @@ async function gather(tx: Tx, f: FindingRow, chat?: ChatInput): Promise<BuiltBun
   const ordered = ids.map((id) => ev.find((e) => e.id === id)).filter((e): e is NonNullable<typeof e> => !!e);
   const defs = await tx.select().from(checkDefinitions)
     .where(and(eq(checkDefinitions.checkKey, f.checkKey), eq(checkDefinitions.enabled, true))).orderBy(asc(checkDefinitions.id));
+  const stack = await assetTechnologies(tx, f.assetId);
   return buildBundle(
     { id: f.id, title: f.title, severity: f.severity, confidence: f.confidence, status: f.status, checkKey: f.checkKey, location: f.location, evidence: f.evidence, remediation: f.remediation },
     ordered.map((e) => ({ id: e.id, sha256: e.sha256, contentType: e.contentType, body: e.body })),
     defs.map((d) => ({ id: d.id, title: d.title, description: d.description, verificationSupported: d.verificationSupported })),
     chat,
+    stack ? { technologies: stack.technologies } : undefined,
   );
 }
 

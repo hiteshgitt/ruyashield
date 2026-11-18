@@ -958,3 +958,8 @@ html:has(.app) body { background: #0b0a10; color: #ecebf3; margin: 0; }
 .app .report-item-figures .sev-high { color: #fb923c; }
 .app .report-item-figures .sev-medium { color: #facc15; }
 .app .report-item-figures .sev-low { color: #7dd3fc; }
+.app .tech-card { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--line, rgba(255,255,255,.08)); }
+.app .tech-list { list-style: none; margin: .5rem 0; padding: 0; display: grid; gap: .35rem; }
+.app .tech-list li { display: flex; justify-content: space-between; align-items: baseline; gap: .75rem; }
+.app .tech-name { font-weight: 600; }
+.app .tech-version { margin-left: .4rem; font-family: var(--font-mono, monospace); font-size: .8em; opacity: .75; }

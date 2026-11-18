@@ -4,6 +4,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { grantFor } from "@/server/policy/matrix";
 import { getAsset, METHODS } from "@/server/assets/assets";
+import { assetTechnologies } from "@/server/assets/technology";
+import { withOrg } from "@/server/db/client";
+import type { Technology } from "@/server/assessments/technology";
 import { listAssessments, listCatalogue } from "@/server/assessments/assessments";
 import { instructions } from "@/server/assets/check";
 import { isAppError } from "@/server/errors";
@@ -50,6 +53,7 @@ async function Asset({ params, searchParams }: { params: PageProps<"/assets/[id]
   const inYear = new Date(now.getTime() + 364 * 86_400_000).toISOString().slice(0, 10);
   const canLaunch = el.eligible && grantFor(role, "assessment.launch") !== "N";
   const isRepo = a.kind === "repository";
+  const stack = isRepo ? null : await withOrg(c.org.id, (tx) => assetTechnologies(tx, a.id));
   const catalogue = canLaunch ? await listCatalogue(c, a.kind) : [];
   const recent = (await listAssessments(c, { assetId: a.id })).slice(0, 5);
   const canEdit = grantFor(role, "asset.edit") !== "N";
@@ -197,6 +201,7 @@ async function Asset({ params, searchParams }: { params: PageProps<"/assets/[id]
             </ActionForm>
           )}
           {grantFor(role, "finding.view") !== "N" && <p className="small"><Link href={`/findings?assetId=${a.id}&status=open`}>Open findings for this asset →</Link></p>}
+          {!isRepo && <TechnologyCard stack={stack} />}
         </div>
 
         <div className="detail-main">
@@ -300,6 +305,32 @@ function PendingChallenge(p: { method: string; host: string; token: string; expi
           )}
         </li>
       </ol>
+    </div>
+  );
+}
+
+const CATEGORY_LABEL: Record<string, string> = { platform: "Platform", framework: "Framework", language: "Language", server: "Web server", cdn: "CDN / hosting", library: "Library", analytics: "Analytics" };
+
+/** What the latest technology check saw: platform, framework, PHP, server, CDN, libraries. */
+function TechnologyCard({ stack }: { stack: { technologies: Technology[]; seenAt: Date | null } | null }) {
+  return (
+    <div className="tech-card">
+      <h3 className="card-label">Technology</h3>
+      {!stack ? (
+        <p className="muted small">Detected at the next assessment (platform, framework, PHP, server, CDN and libraries).</p>
+      ) : stack.technologies.length === 0 ? (
+        <p className="muted small">Nothing identifiable in the public home page.</p>
+      ) : (
+        <ul className="tech-list">
+          {stack.technologies.map((t) => (
+            <li key={t.name}>
+              <span className="tech-name">{t.name}{t.version && <span className="tech-version">{t.version}</span>}</span>
+              <span className="muted small">{CATEGORY_LABEL[t.category] ?? t.category}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {stack?.seenAt && <p className="muted small">Seen {fmt(stack.seenAt)}. Only what the site shows publicly.</p>}
     </div>
   );
 }
