@@ -525,8 +525,15 @@ export async function regressionIntervalAction(_: ActionState, f: FormData): Pro
 
 export async function generateReportAction(_: ActionState, f: FormData): Promise<ActionState> {
   return run(async () => {
-    const r = await generateReport(await requireOrgContext(), { format: str(f, "format"), clientGroupId: str(f, "clientGroupId") || null });
-    return { ok: `Report generated (${r.format.toUpperCase()}, SHA-256 ${r.sha256.slice(0, 12)}…). Download it from the list below.` };
+    const r = await generateReport(await requireOrgContext(), {
+      format: str(f, "format"), clientGroupId: str(f, "clientGroupId") || null,
+      options: {
+        title: str(f, "title"), preset: str(f, "preset") || "client",
+        sections: f.getAll("sections").filter((x): x is string => typeof x === "string"),
+        minSeverity: str(f, "minSeverity") || undefined, includeFixes: f.get("includeFixes") === "on",
+      },
+    });
+    return { ok: `Report generated (${r.format.toUpperCase()}, SHA-256 ${r.sha256.slice(0, 12)}…). Open or download it from the list.` };
   });
 }
 

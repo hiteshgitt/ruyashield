@@ -111,3 +111,47 @@ run("reporting and hardening (database)", () => {
     expect(after.rows.map((r) => r.org_id)).toContain(ctx.org.id);
   });
 });
+
+describe("detailed reports (database)", () => {
+  it("a technical report lists assets and findings, and keeps a snapshot of what it contained", async () => {
+    if (!process.env.DATABASE_URL) return;
+    const { randomUUID } = await import("node:crypto");
+    const { db, withOrg } = await import("@/server/db/client");
+    const { users, assets: assetsT, reports: reportsT } = await import("@/server/db/schema");
+    const { createOrg } = await import("@/server/orgs/orgs");
+    const { loadPrincipal } = await import("@/server/principal");
+    const { generateReport, getReportInfo } = await import("@/server/reports/reports");
+    const { launchAssessment, runAssessment } = await import("@/server/assessments/assessments");
+    const { sql, eq } = await import("drizzle-orm");
+    const email = `rep-${randomUUID()}@ruya-tests.invalid`;
+    const [u] = await db.insert(users).values({ email, displayName: "R", idpIssuer: "test", idpSubject: email }).returning();
+    const s = { idHash: "x", userId: u.id, email, displayName: "R", activeOrgId: null, mfa: true, amr: ["mfa"], authTime: new Date() };
+    const org = await createOrg(s, { name: `Rep ${randomUUID().slice(0, 6)}` });
+    const ctx = (await loadPrincipal(s, org.id))!;
+    const [a] = await withOrg(org.id, (tx) => tx.insert(assetsT).values({ orgId: org.id, host: `rep-${randomUUID().slice(0, 6)}.example.com`, displayName: "Shop", environment: "production", createdBy: u.id, status: "verified" }).returning());
+    const { assessment } = await launchAssessment(ctx, { assetId: a.id, idempotencyKey: `k-${randomUUID()}`, checkIds: ["http.security_headers@1"] });
+    const job = await withOrg(org.id, (tx) => tx.execute<{ payload: { assessmentId: string; token: string } }>(sql`SELECT payload FROM outbox WHERE business_key = ${`assessment:${assessment.id}:1`}`));
+    const found = [{ issueKey: "csp", title: "Missing Content-Security-Policy", severity: "high" as const, location: `https://${a.host}/`, evidence: {}, remediation: "Add a CSP header." },
+      { issueKey: "ref", title: "Referrer-Policy missing", severity: "low" as const, location: `https://${a.host}/`, evidence: {}, remediation: "Add Referrer-Policy." }];
+    await runAssessment(org.id, job.rows[0].payload, { adapters: new Map([["http.security_headers@1", { id: "http.security_headers@1", checkKey: "http.security_headers", run: async () => ({ status: "ok" as const, findings: found, evidence: {} }) }]]), minIntervalMs: 0 });
+
+    const csv = await generateReport(ctx, { format: "csv", options: { preset: "technical", title: "Acme monthly" } });
+    const row = (await withOrg(org.id, (tx) => tx.select().from(reportsT).where(eq(reportsT.id, csv.id))))[0];
+    const text = Buffer.from(row.content).toString("utf8");
+    expect(text).toContain('"asset"');
+    expect(text).toContain("Missing Content-Security-Policy");
+    expect(text).toContain("fix: Add a CSP header.");
+    const info = await getReportInfo(ctx, csv.id);
+    expect(info.params).toMatchObject({ title: "Acme monthly", preset: "technical", snapshot: { openTotal: 2, findingsTotal: 2 } });
+
+    const exec = await generateReport(ctx, { format: "csv", options: { preset: "custom", sections: ["findings"], minSeverity: "high", includeFixes: false } });
+    const execText = Buffer.from((await withOrg(org.id, (tx) => tx.select().from(reportsT).where(eq(reportsT.id, exec.id))))[0].content).toString("utf8");
+    expect(execText).toContain("Missing Content-Security-Policy");
+    expect(execText).not.toContain('"finding","Referrer-Policy missing"');
+    expect(execText).not.toContain("fix: Add a CSP header.");
+
+    const pdf = await generateReport(ctx, { format: "pdf", options: { preset: "client" } });
+    const pdfRow = (await withOrg(org.id, (tx) => tx.select().from(reportsT).where(eq(reportsT.id, pdf.id))))[0];
+    expect(Buffer.from(pdfRow.content).toString("latin1").startsWith("%PDF")).toBe(true);
+  });
+});
