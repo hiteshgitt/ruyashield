@@ -7,6 +7,9 @@ import { getAsset, METHODS } from "@/server/assets/assets";
 import { assetTechnologies } from "@/server/assets/technology";
 import { withOrg } from "@/server/db/client";
 import type { Technology } from "@/server/assessments/technology";
+import { getEdge } from "@/server/edge/edge";
+import { isProOrg } from "@/server/policy/policy";
+import { EdgeFixes } from "./EdgeFixes";
 import { listAssessments, listCatalogue } from "@/server/assessments/assessments";
 import { instructions } from "@/server/assets/check";
 import { isAppError } from "@/server/errors";
@@ -57,6 +60,7 @@ async function Asset({ params, searchParams }: { params: PageProps<"/assets/[id]
   const catalogue = canLaunch ? await listCatalogue(c, a.kind) : [];
   const recent = (await listAssessments(c, { assetId: a.id })).slice(0, 5);
   const canEdit = grantFor(role, "asset.edit") !== "N";
+  const edge = !isRepo && a.status === "verified" && isProOrg(c.org) ? await getEdge(c, a.id) : null;
   const liveAttestations = attestations.filter((t) => !t.revokedAt && t.validFrom <= today && today < t.validTo).length;
 
   const assessments = (
@@ -207,6 +211,8 @@ async function Asset({ params, searchParams }: { params: PageProps<"/assets/[id]
         <div className="detail-main">
           {/* The next useful step comes first: verification until the asset is eligible, then assessments. */}
           {el.eligible ? [assessments, ownership] : [ownership, assessments]}
+
+          {edge && <EdgeFixes assetId={a.id} host={a.host} view={edge} canManage={grantFor(role, "integration.manage") !== "N"} />}
 
           {!isRepo && <section aria-labelledby="h-auth">
             <h2 id="h-auth">Recorded authorizations</h2>

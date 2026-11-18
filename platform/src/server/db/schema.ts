@@ -881,6 +881,24 @@ export const assetSuggestions = pgTable("asset_suggestions", {
 // ---------- 0022 attack-origin monitoring ----------
 export type AttackSourceKind = "cloudflare" | "log_agent";
 export type AttackSourceStatus = "pending" | "active" | "error" | "disabled";
+/** Cloudflare header fixes per website (0031). tokenEnc is sealed; appliedFixes null = no RuyaShield rule live. */
+export const edgeConnections = pgTable("edge_connections", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  orgId: uuid("org_id").notNull(),
+  assetId: uuid("asset_id").notNull(),
+  provider: text("provider").$type<"cloudflare">().notNull().default("cloudflare"),
+  zoneId: text("zone_id").notNull(),
+  zoneName: text("zone_name").notNull(),
+  tokenEnc: text("token_enc").notNull(),
+  status: text("status").$type<"active" | "disabled">().notNull().default("active"),
+  appliedFixes: text("applied_fixes").array(),
+  appliedAt: ts("applied_at"),
+  appliedBy: uuid("applied_by"),
+  lastError: text("last_error"),
+  createdBy: uuid("created_by").notNull(),
+  createdAt: ts("created_at").notNull().defaultNow(),
+});
+
 export const attackSources = pgTable("attack_sources", {
   id: uuid("id").primaryKey().defaultRandom(),
   orgId: uuid("org_id").notNull(),

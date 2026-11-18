@@ -16,6 +16,7 @@ import * as aiSvc from "@/server/ai/gateway";
 import * as planSvc from "@/server/remediation/plans";
 import * as approvalSvc from "@/server/remediation/approvals";
 import * as integrationSvc from "@/server/remediation/integrations";
+import * as edgeSvc from "@/server/edge/edge";
 import * as attackSvc from "@/server/attacks/attacks";
 import { verifyOrgAuditChain } from "@/server/audit/view";
 import * as referralSvc from "@/server/webmonitor/referrals";
@@ -490,6 +491,36 @@ export async function createGithubIntegrationAction(_: ActionState, f: FormData)
     return row.tokenHasAdmin
       ? { ok: `${row.externalId} connected. The token also has admin rights on it; a token with only Contents and Pull requests is safer.`, tone: "warn" }
       : { ok: `${row.externalId} connected (default branch ${row.defaultBranch}).` };
+  });
+}
+
+export async function connectEdgeAction(_: ActionState, f: FormData): Promise<ActionState> {
+  return run(async () => {
+    const r = await edgeSvc.connectEdge(await requireOrgContext(), { assetId: str(f, "assetId"), zoneId: str(f, "zoneId"), token: String(f.get("token") ?? "") });
+    return { ok: `Cloudflare connected (zone ${r.zoneName}). Choose the headers to apply.` };
+  });
+}
+
+export async function applyEdgeFixesAction(_: ActionState, f: FormData): Promise<ActionState> {
+  return run(async () => {
+    const r = await edgeSvc.applyEdgeFixes(await requireOrgContext(), { assetId: str(f, "assetId"), fixes: f.getAll("fix").map(String) });
+    return { ok: `Applied at Cloudflare: ${r.fixes.length} header${r.fixes.length === 1 ? "" : "s"}. ${r.retested ? `${r.retested} finding${r.retested === 1 ? " is" : "s are"} being re-tested now.` : "The next scan confirms the result."}` };
+  });
+}
+
+export async function undoEdgeFixesAction(_: ActionState, f: FormData): Promise<ActionState> {
+  return run(async () => {
+    const r = await edgeSvc.undoEdgeFixes(await requireOrgContext(), str(f, "assetId"));
+    return { ok: r.removed ? "RuyaShield's Cloudflare rule was removed." : "There was no RuyaShield rule on Cloudflare to remove.", tone: "warn" };
+  });
+}
+
+export async function disconnectEdgeAction(_: ActionState, f: FormData): Promise<ActionState> {
+  return run(async () => {
+    const r = await edgeSvc.disconnectEdge(await requireOrgContext(), str(f, "assetId"));
+    return r.ruleLeft
+      ? { ok: "Disconnected, but the rule could not be removed. Delete the rule named “RuyaShield security headers” in Cloudflare → Rules → Transform Rules.", tone: "warn" }
+      : { ok: "Cloudflare disconnected and the token deleted.", tone: "warn" };
   });
 }
 
