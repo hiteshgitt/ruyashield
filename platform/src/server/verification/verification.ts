@@ -15,7 +15,7 @@ import { eligibilityOf } from "../assets/assets";
 import { createGuard, ScopeBlocked } from "../assessments/guard";
 import type { Scope } from "../assessments/scope";
 import { ADAPTERS, ENGINE_VERSION, fingerprint, normalizeResult, targetForKind, targetOf, type CheckResult } from "../assessments/checks";
-import { snapshotRepo, type RepoRef, type RepoSnapshot } from "../remediation/repo";
+import { refForIntegration, snapshotRepo, type RepoRef, type RepoSnapshot } from "../remediation/repo";
 import type { RunDeps } from "../assessments/assessments";
 import { canonicalJson, sha256, storeEvidence } from "../findings/evidence";
 import { notify, recordTransition } from "../findings/record";
@@ -194,7 +194,7 @@ export async function runVerification(orgId: string, payload: { runId?: unknown 
       if (a.kind === "repository") {
         const i = a.repositoryIntegrationId ? (await tx.select().from(repositoryIntegrations).where(eq(repositoryIntegrations.id, a.repositoryIntegrationId)))[0] : undefined;
         if (!i || i.status !== "active") return { stop: "authorization_lapsed" };
-        repo = { externalId: i.externalId, defaultBranch: i.defaultBranch };
+        repo = refForIntegration(i);
       }
       return { host: a.host, kind: a.kind, repo };
     });

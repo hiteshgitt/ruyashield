@@ -14,7 +14,7 @@ import { enqueue } from "../outbox/outbox";
 import { notify, recordTransition } from "../findings/record";
 import { systemTransitionAllowed } from "../findings/lifecycle";
 import { integrationRef, loadPlan, rejected, res, setPlanState, userActor, type Ctx, type PlanRow } from "./plans";
-import { BRANCH_PREFIX, deleteBranch, observeChange, openChange, resolveCommit } from "./repo";
+import { BRANCH_PREFIX, changeUrl, deleteBranch, observeChange, openChange, resolveCommit } from "./repo";
 
 // Approvals and approved changes (RS-REMED-004..006). An approval is bound to the exact plan content (its SHA-256):
 // any edit invalidates it. Approving a patch plan only opens a ruyashield/… branch; nothing is ever merged by
@@ -282,7 +282,7 @@ export async function runOpenChange(orgId: string, payload: { changeId?: unknown
       });
       return `failed:${error}`;
     }
-    opened = { headSha: existing, url: `local://${i.externalId}/${ch.branch}` };
+    opened = { headSha: existing, url: changeUrl(ref, ch.branch) };
   }
 
   const result = await withOrg(orgId, async (tx) => {
@@ -352,6 +352,8 @@ export async function sweepExpiredApprovals(now = new Date()): Promise<number> {
 }
 
 /** Reads each open change from the repository. Merged → the finding awaits re-test; closed → the plan can be reworked. */
+const GITHUB_OBSERVE_MS = 5 * 60_000;
+
 export async function observeOpenChanges(opts: { orgId?: string; integrationId?: string } = {}): Promise<number> {
   const rows = (await db.execute<{ id: string; org_id: string }>(sql`SELECT * FROM open_code_changes()`)).rows
     .filter((r) => !opts.orgId || r.org_id === opts.orgId);
@@ -361,6 +363,8 @@ export async function observeOpenChanges(opts: { orgId?: string; integrationId?:
       const ch = (await tx.select().from(codeChanges).where(eq(codeChanges.id, row.id)))[0];
       if (!ch || ch.state !== "open" || !ch.headSha || (opts.integrationId && ch.integrationId !== opts.integrationId)) return null;
       const i = (await tx.select().from(repositoryIntegrations).where(eq(repositoryIntegrations.id, ch.integrationId)))[0];
+      // GitHub is asked at most every 5 minutes per pull request (a webhook-triggered look is not throttled).
+      if (i?.type === "github" && !opts.integrationId && ch.observedAt && Date.now() - ch.observedAt.getTime() < GITHUB_OBSERVE_MS) return null;
       return i ? { ch, i } : null;
     });
     if (!pre) continue;

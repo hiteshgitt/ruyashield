@@ -481,6 +481,18 @@ export async function createIntegrationAction(_: ActionState, f: FormData): Prom
   });
 }
 
+export async function createGithubIntegrationAction(_: ActionState, f: FormData): Promise<ActionState> {
+  return run(async () => {
+    const testCommands = lines(f, "testCommands").map((l) => l.split(/\s+/));
+    const row = await integrationSvc.createGithubIntegration(await requireOrgContext(), {
+      name: str(f, "name") || undefined, externalId: str(f, "externalId"), token: String(f.get("token") ?? ""), testCommands,
+    });
+    return row.tokenHasAdmin
+      ? { ok: `${row.externalId} connected. The token also has admin rights on it; a token with only Contents and Pull requests is safer.`, tone: "warn" }
+      : { ok: `${row.externalId} connected (default branch ${row.defaultBranch}).` };
+  });
+}
+
 export async function disableIntegrationAction(_: ActionState, f: FormData): Promise<ActionState> {
   return run(async () => {
     await integrationSvc.disableIntegration(await requireOrgContext(), str(f, "integrationId"));

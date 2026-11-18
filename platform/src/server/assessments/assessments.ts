@@ -18,7 +18,7 @@ import { scopeSha, validateScope, type CatalogueEntry, type Scope } from "./scop
 import { signJobToken, verifyJobToken } from "./token";
 import { createGuard, ScopeBlocked } from "./guard";
 import { ADAPTERS, ENGINE_VERSION, fingerprint, normalizeResult, targetForKind, targetOf, type CheckAdapter, type CheckResult } from "./checks";
-import { snapshotRepo, type RepoRef, type RepoSnapshot } from "../remediation/repo";
+import { refForIntegration, snapshotRepo, type RepoRef, type RepoSnapshot } from "../remediation/repo";
 import { ingestFinding, markMissed } from "../findings/ingest";
 import { recordSuggestions } from "../assets/suggestions";
 import { queueReferralPublish, referralForLaunch } from "../webmonitor/referrals";
@@ -319,7 +319,7 @@ export async function runAssessment(orgId: string, payload: { assessmentId?: unk
         // A repository asset is only as authorized as its integration: a disabled integration stops the run.
         const i = a.repositoryIntegrationId ? (await tx.select().from(repositoryIntegrations).where(eq(repositoryIntegrations.id, a.repositoryIntegrationId)))[0] : undefined;
         if (!i || i.status !== "active") return { stop: { status: "failed", reason: "authorization_lapsed" } as Stop };
-        repo = { externalId: i.externalId, defaultBranch: i.defaultBranch };
+        repo = refForIntegration(i);
       }
       const t = now().getTime();
       if (t >= scope.windowEnd.getTime()) return { stop: { status: "timed_out", reason: "window_ended" } as Stop };

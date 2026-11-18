@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, withOrg, isUuid } from "../db/client";
@@ -7,7 +7,9 @@ import { audit } from "../audit/audit";
 import { AppError, notFound } from "../errors";
 import { authorize } from "../policy/policy";
 import { userActor, type Ctx } from "./plans";
-import { repoPath, resolveCommit } from "./repo";
+import { repoPath, repoTokenAad, resolveCommit } from "./repo";
+import { assertRepoName, assertTokenShape, inspectRepository } from "./github";
+import { seal, secretsConfigured } from "../attacks/secretbox";
 
 // Repository integrations (RS-REMED-004, provisional local_git adapter). Least privilege: only the scopes needed to
 // read code and open a change are ever requested; there is no merge or admin scope. Test commands are stored as argv
@@ -46,8 +48,50 @@ export async function createIntegration(c: Ctx, input: unknown) {
   });
 }
 
+// ---------- GitHub (safe apply: a pull request, never a merge) ----------
+
+const githubInput = z.object({
+  name: z.string().trim().max(100).optional(),
+  externalId: z.string().trim().min(3).max(140),
+  token: z.string().trim().min(1).max(300),
+  testCommands: z.array(argv).max(10).default([]),
+});
+
+/**
+ * Connects a GitHub repository with the customer's fine-grained token (one repository; Contents and Pull requests
+ * read and write). The token is checked against GitHub, then stored sealed; it is never shown again or logged.
+ */
+export async function createGithubIntegration(c: Ctx, input: unknown) {
+  const parsed = githubInput.safeParse(input ?? {});
+  if (!parsed.success) throw new AppError(422, "invalid_request", parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "));
+  const d = parsed.data;
+  await authorize(c.principal, "integration.manage", { type: "org", id: c.org.id }, c.org);
+  const externalId = d.externalId.replace(/^https:\/\/github\.com\//i, "").replace(/\.git$/i, "").replace(/\/+$/, "");
+  assertRepoName(externalId);
+  assertTokenShape(d.token);
+  if (!secretsConfigured()) throw new AppError(503, "secrets_unavailable", "This server cannot store tokens yet (no secrets key).");
+  const info = await inspectRepository({ externalId, defaultBranch: "", type: "github", token: d.token });
+  const id = randomUUID();
+  const tokenEnc = seal(d.token, repoTokenAad(c.org.id, id));
+  return withOrg(c.org.id, async (tx) => {
+    const dup = (await tx.select({ id: repositoryIntegrations.id }).from(repositoryIntegrations)
+      .where(and(eq(repositoryIntegrations.type, "github"), eq(repositoryIntegrations.externalId, externalId), eq(repositoryIntegrations.status, "active"))))[0];
+    if (dup) throw new AppError(409, "integration_exists", "This repository is already connected.");
+    const row = (await tx.insert(repositoryIntegrations).values({
+      id, orgId: c.org.id, type: "github", name: d.name || externalId, externalId, defaultBranch: info.defaultBranch,
+      scopes: SCOPES, testCommands: d.testCommands, tokenEnc, createdBy: c.principal.userId,
+    }).returning())[0];
+    await audit(tx, {
+      actor: userActor(c.principal), action: "integration.created", target: { type: "repository_integration", id: row.id }, requestId: c.principal.requestId,
+      details: { type: "github", externalId, defaultBranch: info.defaultBranch, private: info.private, tokenHasAdmin: info.admin, testCommands: row.testCommands },
+    });
+    return { ...row, tokenEnc: null, tokenHasAdmin: info.admin };
+  });
+}
+
 export async function listIntegrations(c: Ctx) {
-  return withOrg(c.org.id, (tx) => tx.select().from(repositoryIntegrations).orderBy(desc(repositoryIntegrations.createdAt)).limit(100));
+  const rows = await withOrg(c.org.id, (tx) => tx.select().from(repositoryIntegrations).orderBy(desc(repositoryIntegrations.createdAt)).limit(100));
+  return rows.map((r) => ({ ...r, tokenEnc: null }));
 }
 
 export async function disableIntegration(c: Ctx, id: string) {

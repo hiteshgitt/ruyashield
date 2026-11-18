@@ -603,9 +603,11 @@ export type RepoScope = "contents:read" | "pull_requests:write" | "metadata:read
 export const repositoryIntegrations = pgTable("repository_integrations", {
   id: uuid("id").primaryKey().defaultRandom(),
   orgId: uuid("org_id").notNull(),
-  type: text("type").$type<"local_git">().notNull(),
+  type: text("type").$type<"local_git" | "github">().notNull(),
   name: text("name").notNull(),
   externalId: text("external_id").notNull(),
+  /** github: sealed fine-grained token (aad repoTokenAad). */
+  tokenEnc: text("token_enc"),
   defaultBranch: text("default_branch").notNull().default("main"),
   scopes: text("scopes").$type<RepoScope>().array().notNull(),
   testCommands: jsonb("test_commands").$type<string[][]>().notNull().default([]),

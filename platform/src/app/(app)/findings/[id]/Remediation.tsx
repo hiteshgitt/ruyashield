@@ -120,7 +120,7 @@ export async function Remediation({ c, findingId, status }: { c: Ctx; findingId:
                     <li key={ch.id}>
                       <div className="plan-list-head">
                         <StatusBadge status={ch.state} /> branch <code>{ch.branch}</code>
-                        {ch.prUrl && <a href={ch.prUrl} rel="noreferrer noopener" target="_blank">change</a>}
+                        {ch.prUrl && (ch.prUrl.startsWith("https://") ? <a href={ch.prUrl} rel="noreferrer noopener" target="_blank">{ch.prUrl.includes("/pull/") ? "pull request" : "branch"}</a> : <code className="small">{ch.prUrl}</code>)}
                       </div>
                       {(ch.headSha || ch.mergeSha) && <div className="muted mono">{ch.headSha && `head ${ch.headSha.slice(0, 12)}`}{ch.headSha && ch.mergeSha && " · "}{ch.mergeSha && `merged as ${ch.mergeSha.slice(0, 12)}`}</div>}
                       {ch.error && <div className="muted">{ch.error}</div>}

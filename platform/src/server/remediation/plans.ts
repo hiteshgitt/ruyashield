@@ -14,7 +14,7 @@ import { canonicalJson, sha256, storeEvidence } from "../findings/evidence";
 import { recordTransition } from "../findings/record";
 import { systemTransitionAllowed } from "../findings/lifecycle";
 import { verifiableChecks } from "../verification/verification";
-import { checkoutForSandbox, checkPatch, resolveCommit, type RepoRef } from "./repo";
+import { checkoutForSandbox, checkPatch, refForIntegration, resolveCommit, type RepoRef } from "./repo";
 import { ISOLATION_LABEL, SANDBOX_LIMITS, runTests, sandboxAvailable, type CommandRunner } from "./sandbox";
 
 // Remediation plans and sandbox runs (RS-REMED-001..003). A plan is a human-owned description of a fix: either guided
@@ -68,7 +68,7 @@ export async function loadPlan(tx: Tx, c: Ctx, planId: string, lock = false) {
   return { plan, f, a };
 }
 
-export const integrationRef = (i: IntegrationRow): RepoRef => ({ externalId: i.externalId, defaultBranch: i.defaultBranch });
+export const integrationRef = (i: IntegrationRow): RepoRef => refForIntegration(i);
 
 async function activeIntegration(tx: Tx, id: string | null | undefined): Promise<IntegrationRow> {
   if (!id || !isUuid(id)) throw new AppError(422, "integration_required", "A patch plan needs a connected repository.");
