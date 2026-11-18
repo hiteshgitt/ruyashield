@@ -439,6 +439,10 @@ html.rs-motion:not(.rs-ready) .hero-copy, html.rs-motion:not(.rs-ready) .console
 .signin-strong { color: var(--text); font-weight: 600; }
 .signin-google { display: flex; align-items: center; justify-content: center; gap: .75rem; min-height: 3.25rem; margin-top: .5rem; border-radius: .875rem; background: #fff; color: #1f1f1f; font-weight: 600; font-size: 1rem; text-decoration: none; box-shadow: 0 .75rem 2rem -1rem rgba(255, 255, 255, .5); transition: transform .15s ease, box-shadow .15s ease; }
 .signin-google:hover { transform: translateY(-1px); box-shadow: 0 1rem 2.5rem -1rem rgba(255, 255, 255, .6); }
+.signin-ruyalab { background: linear-gradient(135deg, #5b5bd6, #ff5a1f); color: #fff; box-shadow: 0 .75rem 2rem -1rem rgba(255, 90, 31, .55); }
+.signin-ruyalab:hover { box-shadow: 0 1rem 2.5rem -1rem rgba(255, 90, 31, .7); }
+.signin-ruyalab-mark { display: grid; place-items: center; width: 1.5rem; height: 1.5rem; border-radius: .4rem; background: rgba(255, 255, 255, .22); font-weight: 800; font-size: .85rem; }
+.signin-ruyalab-note { font-size: .8rem; text-align: center; margin: .5rem 0 .25rem; }
 .signin-hint { margin: -.25rem 0 0; text-align: center; font-size: .8125rem; color: var(--text-3); }
 .signin-steps { list-style: none; margin: .5rem 0 0; padding: 1rem 0 0; border-top: 1px solid var(--line); display: grid; gap: .625rem; }
 .signin-steps li { display: flex; align-items: center; gap: .75rem; font-size: .9375rem; color: var(--text-2); }

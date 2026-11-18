@@ -32,18 +32,32 @@ export function safeReturnTo(v: unknown): string {
 /** amr without an MFA method, or missing amr, means no MFA (fail closed). */
 export const amrHasMfa = (amr: readonly string[] | undefined) => !!amr?.some((m) => MFA_AMR.has(m));
 
-let oidcConfig: Promise<oidc.Configuration> | undefined;
-function getOidcConfig(): Promise<oidc.Configuration> {
-  const issuer = process.env.OIDC_ISSUER, id = process.env.OIDC_CLIENT_ID, secret = process.env.OIDC_CLIENT_SECRET;
-  if (!issuer || !id) throw new AppError(503, "auth_not_configured", "OIDC is not configured");
-  oidcConfig ??= oidc.discovery(new URL(issuer), id, secret || undefined).catch((e) => {
-    oidcConfig = undefined;
-    throw e;
-  });
-  return oidcConfig;
+/** "oidc" is the original provider (Google); "ruyalab" is the shared Ruya Lab account (accounts.ruyalab.com). */
+export type Idp = "oidc" | "ruyalab";
+
+/** Ruya Lab sign-in is offered when its client is configured. */
+export const ruyaLabEnabled = () => Boolean(process.env.RUYALAB_ISSUER && process.env.RUYALAB_CLIENT_ID && process.env.RUYALAB_CLIENT_SECRET);
+
+const oidcConfigs = new Map<Idp, Promise<oidc.Configuration>>();
+function getOidcConfig(idp: Idp = "oidc"): Promise<oidc.Configuration> {
+  const env = idp === "ruyalab"
+    ? { issuer: process.env.RUYALAB_ISSUER, id: process.env.RUYALAB_CLIENT_ID, secret: process.env.RUYALAB_CLIENT_SECRET }
+    : { issuer: process.env.OIDC_ISSUER, id: process.env.OIDC_CLIENT_ID, secret: process.env.OIDC_CLIENT_SECRET };
+  if (!env.issuer || !env.id) throw new AppError(503, "auth_not_configured", "OIDC is not configured");
+  let p = oidcConfigs.get(idp);
+  if (!p) {
+    // Plain-HTTP issuers only for local testing (never in production).
+    const opts = env.issuer.startsWith("http://") && process.env.NODE_ENV !== "production" ? { execute: [oidc.allowInsecureRequests] } : undefined;
+    p = oidc.discovery(new URL(env.issuer), env.id, env.secret || undefined, undefined, opts).catch((e) => {
+      oidcConfigs.delete(idp);
+      throw e;
+    });
+    oidcConfigs.set(idp, p);
+  }
+  return p;
 }
 
-const callbackUrl = () => new URL("/auth/callback", process.env.APP_URL ?? "http://localhost:3200").toString();
+const callbackUrl = (idp: Idp = "oidc") => new URL(idp === "ruyalab" ? "/auth/ruyalab/callback" : "/auth/callback", process.env.APP_URL ?? "http://localhost:3200").toString();
 
 export const LOGIN_STATE_COOKIE = "ruya_login_state";
 export const LOGIN_STATE_TTL_S = LOGIN_STATE_TTL_MS / 1000;
@@ -52,21 +66,25 @@ export const LOGIN_STATE_TTL_S = LOGIN_STATE_TTL_MS / 1000;
  * Starts a login: stores one-shot state/nonce/PKCE and returns where to send the browser.
  * The caller must also set `state` in a browser cookie; the callback requires both to match (login CSRF).
  */
-export async function startLogin(opts: { returnTo?: string; stepUp?: boolean }): Promise<{ url: string; state: string }> {
+export async function startLogin(opts: { returnTo?: string; stepUp?: boolean; idp?: Idp }): Promise<{ url: string; state: string }> {
+  const idp: Idp = opts.idp === "ruyalab" ? "ruyalab" : "oidc";
+  if (idp === "ruyalab" && !ruyaLabEnabled()) throw new AppError(503, "auth_not_configured", "Ruya Lab sign-in is not configured");
   const state = randomToken(24), nonce = randomToken(24), codeVerifier = oidc.randomPKCECodeVerifier();
-  await db.insert(loginStates).values({ state, nonce, codeVerifier, returnTo: safeReturnTo(opts.returnTo) });
+  await db.insert(loginStates).values({ state, nonce, codeVerifier, returnTo: safeReturnTo(opts.returnTo), provider: idp });
   await db.delete(loginStates).where(lt(loginStates.createdAt, new Date(Date.now() - LOGIN_STATE_TTL_MS)));
 
-  if (providerKind() === "dev") return { url: `/auth/dev?state=${encodeURIComponent(state)}`, state };
+  if (idp === "oidc" && providerKind() === "dev") return { url: `/auth/dev?state=${encodeURIComponent(state)}`, state };
 
-  const config = await getOidcConfig();
+  const config = await getOidcConfig(idp);
   const params: Record<string, string> = {
-    redirect_uri: callbackUrl(), scope: "openid email profile", state, nonce,
+    redirect_uri: callbackUrl(idp), scope: "openid email profile", state, nonce,
     code_challenge: await oidc.calculatePKCECodeChallenge(codeVerifier), code_challenge_method: "S256",
   };
   // Always show the provider's account chooser, so after signing out a different (or new) account can be used
   // instead of silently reusing the one the browser is signed in to.
-  Object.assign(params, opts.stepUp ? { prompt: "login", max_age: "0" } : { prompt: "select_account" });
+  // Ruya Lab is single sign-on across Ruya Lab products: an existing Ruya Lab session is reused.
+  if (idp === "oidc") Object.assign(params, opts.stepUp ? { prompt: "login", max_age: "0" } : { prompt: "select_account" });
+  else if (opts.stepUp) Object.assign(params, { prompt: "login", max_age: "0" });
   return { url: oidc.buildAuthorizationUrl(config, params).toString(), state };
 }
 
@@ -74,7 +92,7 @@ interface Identity { issuer: string; subject: string; email: string; name: strin
 
 export type CallbackInput =
   | { kind: "dev"; state: string; email: string; name: string; mfa: boolean }
-  | { kind: "oidc"; currentUrl: URL };
+  | { kind: "oidc"; currentUrl: URL; idp?: Idp };
 
 export interface RequestMeta { ip: string | null; userAgent: string | null }
 
@@ -120,6 +138,7 @@ export async function completeLogin(input: CallbackInput, meta: RequestMeta & { 
 
   let id: Identity;
   try {
+    if (input.kind === "oidc" && (input.idp ?? "oidc") !== ls.provider) throw new AppError(400, "provider_mismatch");
     id = input.kind === "dev" ? devIdentity(input) : await oidcIdentity(input.currentUrl, ls);
   } catch (e) {
     await recordFailure(ipKey, meta, e instanceof AppError ? e.code : "idp_error");
@@ -129,7 +148,7 @@ export async function completeLogin(input: CallbackInput, meta: RequestMeta & { 
   const acctKey = `acct:${id.email}`;
   if (await rateLimited([acctKey])) throw new AppError(429, "rate_limited", "Too many failed sign-in attempts. Try again later.");
 
-  const user = await upsertUser(id);
+  const user = ls.provider === "ruyalab" ? await linkRuyaLabUser(id) : await upsertUser(id);
   if (user.disabledAt) {
     await recordFailure([...ipKey, acctKey], meta, "user_disabled", id.email);
     throw new AppError(403, "user_disabled", "This account is disabled.");
@@ -157,8 +176,8 @@ function devIdentity(i: Extract<CallbackInput, { kind: "dev" }>): Identity {
 }
 
 async function oidcIdentity(currentUrl: URL, ls: typeof loginStates.$inferSelect): Promise<Identity> {
-  if (providerKind() !== "oidc") throw new AppError(400, "provider_mismatch");
-  const config = await getOidcConfig();
+  if (ls.provider === "oidc" && providerKind() !== "oidc") throw new AppError(400, "provider_mismatch");
+  const config = await getOidcConfig(ls.provider);
   const tokens = await oidc.authorizationCodeGrant(config, currentUrl, {
     pkceCodeVerifier: ls.codeVerifier, expectedState: ls.state, expectedNonce: ls.nonce, idTokenExpected: true,
   });
@@ -166,6 +185,8 @@ async function oidcIdentity(currentUrl: URL, ls: typeof loginStates.$inferSelect
   if (!c) throw new AppError(400, "idp_error");
   const email = typeof c.email === "string" ? c.email.toLowerCase() : "";
   if (!email || c.email_verified === false) throw new AppError(403, "email_unverified", "Your identity provider did not supply a verified email.");
+  // Ruya Lab always states it; anything but an explicit true is not a verified address.
+  if (ls.provider === "ruyalab" && c.email_verified !== true) throw new AppError(403, "email_unverified", "Confirm your email in your Ruya Lab account first.");
   const amr = Array.isArray(c.amr) ? c.amr.filter((x): x is string => typeof x === "string") : [];
   const authTime = typeof c.auth_time === "number" ? new Date(c.auth_time * 1000) : new Date(0); // unknown => never fresh
   return { issuer: c.iss, subject: c.sub, email, name: typeof c.name === "string" ? c.name : email, amr, authTime };
@@ -181,6 +202,26 @@ async function upsertUser(id: Identity) {
       throw e;
     });
   return rows[0];
+}
+
+/**
+ * A Ruya Lab identity: the user already linked to it, else the RuyaShield user with the same (verified) email, which
+ * gets linked, else a new user. Signing in still needs RuyaShield's authenticator code afterwards.
+ */
+async function linkRuyaLabUser(id: Identity) {
+  const linked = (await db.select().from(users).where(eq(users.ruyalabSub, id.subject)).limit(1))[0];
+  if (linked) return linked;
+  const byEmail = (await db.select().from(users).where(eq(users.email, id.email)).limit(1))[0];
+  if (byEmail) {
+    if (byEmail.ruyalabSub && byEmail.ruyalabSub !== id.subject) throw new AppError(409, "account_conflict", "This RuyaShield account is linked to a different Ruya Lab account.");
+    const [u] = await db.update(users).set({ ruyalabSub: id.subject, emailVerifiedAt: byEmail.emailVerifiedAt ?? new Date() }).where(eq(users.id, byEmail.id)).returning();
+    await withOrg(null, (tx) => audit(tx, { actor: { type: "user", id: u.id }, action: "auth.ruyalab_linked", details: { issuer: id.issuer } }));
+    return u;
+  }
+  const [u] = await db.insert(users).values({
+    email: id.email, displayName: id.name, idpIssuer: id.issuer, idpSubject: id.subject, ruyalabSub: id.subject, emailVerifiedAt: new Date(),
+  }).returning();
+  return u;
 }
 
 export async function auditLogout(userId: string, ip: string | null) {

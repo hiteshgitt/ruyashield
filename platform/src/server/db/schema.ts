@@ -21,6 +21,8 @@ export const users = pgTable("users", {
   idpSubject: text("idp_subject").notNull(),
   disabledAt: ts("disabled_at"),
   emailVerifiedAt: ts("email_verified_at"),
+  /** accounts.ruyalab.com subject, once this user has signed in with Ruya Lab (0032). */
+  ruyalabSub: text("ruyalab_sub"),
   createdAt: ts("created_at").notNull().defaultNow(),
 });
 
@@ -60,6 +62,7 @@ export const loginStates = pgTable("login_states", {
   nonce: text("nonce").notNull(),
   codeVerifier: text("code_verifier").notNull(),
   returnTo: text("return_to").notNull().default("/"),
+  provider: text("provider").$type<"oidc" | "ruyalab">().notNull().default("oidc"),
   createdAt: ts("created_at").notNull().defaultNow(),
 });
 

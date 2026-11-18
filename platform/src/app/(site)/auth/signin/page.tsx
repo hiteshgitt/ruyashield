@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { getContext } from "@/server/context";
-import { safeReturnTo } from "@/server/auth/login";
+import { ruyaLabEnabled, safeReturnTo } from "@/server/auth/login";
 import { logoutAction } from "@/app/(app)/actions";
 import { MIN_PASSWORD } from "@/server/auth/password";
 import { passwordSignInAction, resendVerificationAction, signUpAction } from "../actions";
@@ -94,6 +94,14 @@ async function Card({ searchParams }: { searchParams: PageProps<"/auth/signin">[
       <h1 id="signin-title" className="signin-title">{isNew ? "Create your account" : "Welcome back"}</h1>
       <p className="signin-muted">{isNew ? "Use Google, or your email and a password. Every account adds an authenticator code." : "Sign in with Google or with your email and password."}</p>
 
+      {ruyaLabEnabled() && (
+        <>
+          <a className="signin-google signin-ruyalab" href={`/auth/ruyalab/login?returnTo=${encodeURIComponent(returnTo)}`}>
+            <span className="signin-ruyalab-mark" aria-hidden="true">R</span> Continue with Ruya Lab
+          </a>
+          <p className="signin-muted signin-ruyalab-note">One account for RuyaShield, WebMonitor and every Ruya Lab product.</p>
+        </>
+      )}
       <a className="signin-google" href={login}><GoogleMark /> Continue with Google</a>
       <div className="signin-or"><span>or with email</span></div>
 
