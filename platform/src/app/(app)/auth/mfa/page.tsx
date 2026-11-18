@@ -61,7 +61,7 @@ async function Body({ searchParams }: { searchParams: PageProps<"/auth/mfa">["se
     return (
       <>
         <PageHeader title="Two-step verification" lead={<>Signed in with Google as <strong>{challenge.email}</strong>. Enter the code from your authenticator app.</>} />
-        <MfaForm action={verifyLoginCode} submit="Verify" allowRecovery />
+        <MfaForm action={verifyLoginCode} submit="Verify" allowRecovery offerRemember />
       </>
     );
   }
@@ -79,7 +79,7 @@ async function Body({ searchParams }: { searchParams: PageProps<"/auth/mfa">["se
         </li>
         <li>Enter the 6-digit code the app shows.</li>
       </ol>
-      <MfaForm action={verifyLoginCode} submit="Turn on and sign in" allowRecovery={false} />
+      <MfaForm action={verifyLoginCode} submit="Turn on and sign in" allowRecovery={false} offerRemember />
     </>
   );
 }

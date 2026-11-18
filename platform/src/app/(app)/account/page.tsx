@@ -109,7 +109,7 @@ async function Account() {
                 <span className={`account-dot${x.current ? " current" : ""}`} aria-hidden="true" />
                 <span className="account-session-text">
                   <span className="account-row-title"><b>{x.device}</b>{x.current && <span className="badge ok">This device</span>}</span>
-                  <span className="muted small">{x.ip ?? "Unknown address"} · signed in {fmt(x.createdAt)} · active {fmt(x.lastSeenAt)}</span>
+                  <span className="muted small">{x.ip ?? "Unknown address"} · signed in {fmt(x.createdAt)} · active {fmt(x.lastSeenAt)}{x.remembered && <> · kept signed in until {fmt(x.expiresAt)}</>}</span>
                 </span>
                 {!x.current && (
                   <ActionForm action={signOutSessionAction} submit="Sign out" variant="secondary" className="row inline-form">

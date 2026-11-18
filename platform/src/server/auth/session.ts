@@ -5,6 +5,9 @@ import { sessions, users } from "../db/schema";
 
 export const SESSION_ABSOLUTE_MS = 12 * 60 * 60 * 1000;
 export const SESSION_IDLE_MS = 30 * 60 * 1000;
+// "Keep me signed in on this device" (chosen at the authenticator step). Step-up still guards sensitive actions.
+export const REMEMBER_ABSOLUTE_MS = 30 * 24 * 60 * 60 * 1000;
+export const REMEMBER_IDLE_MS = 7 * 24 * 60 * 60 * 1000;
 const TOUCH_EVERY_MS = 60 * 1000;
 
 export const sha256 = (s: string) => createHash("sha256").update(s).digest("hex");
@@ -25,15 +28,17 @@ export interface NewSession {
   authTime: Date;
   ip?: string | null;
   userAgent?: string | null;
+  remember?: boolean;
 }
 
 /** Creates a fresh session (new id on every login, RS-IAM-007) and returns the raw cookie token. */
 export async function createSession(s: NewSession): Promise<{ token: string; expiresAt: Date }> {
   const token = randomToken();
-  const expiresAt = new Date(Date.now() + SESSION_ABSOLUTE_MS);
+  const remember = s.remember === true;
+  const expiresAt = new Date(Date.now() + (remember ? REMEMBER_ABSOLUTE_MS : SESSION_ABSOLUTE_MS));
   await db.insert(sessions).values({
     idHash: sha256(token), userId: s.userId, mfa: s.mfa, amr: s.amr, authTime: s.authTime,
-    expiresAt, ip: s.ip ?? null, userAgent: s.userAgent?.slice(0, 300) ?? null,
+    expiresAt, remember, ip: s.ip ?? null, userAgent: s.userAgent?.slice(0, 300) ?? null,
   });
   return { token, expiresAt };
 }
@@ -61,7 +66,8 @@ export async function readSession(token: string | undefined | null, now = new Da
   const row = rows[0];
   if (!row || row.disabledAt) return null;
   const s = row.s;
-  if (s.expiresAt <= now || now.getTime() - s.lastSeenAt.getTime() > SESSION_IDLE_MS) {
+  const idleLimit = s.remember ? REMEMBER_IDLE_MS : SESSION_IDLE_MS;
+  if (s.expiresAt <= now || now.getTime() - s.lastSeenAt.getTime() > idleLimit) {
     await db.update(sessions).set({ revokedAt: now }).where(eq(sessions.idHash, idHash));
     return null;
   }

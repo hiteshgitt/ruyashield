@@ -4,7 +4,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { db } from "@/server/db/client";
 import { mfaRecoveryCodes, pendingLogins, sessions, userMfa, users } from "@/server/db/schema";
 import { open } from "@/server/attacks/secretbox";
-import { readSession } from "@/server/auth/session";
+import { createSession, readSession } from "@/server/auth/session";
 import { codeAt, stepAt } from "@/server/auth/totp";
 import { challengeFor, completeMfaLogin, createPendingLogin, dismissReveal, issueRecoveryReveal, PENDING_MAX_ATTEMPTS, pendingReveal, remainingRecoveryCodes, resetMfa, stepUp } from "@/server/auth/mfa";
 
@@ -120,5 +120,22 @@ run("built-in MFA after Google sign-in (database)", () => {
     await stepUp(old, freshCode(secret, 1), meta);
     const renewed = (await readSession(r.token))!;
     expect(Date.now() - renewed.authTime.getTime()).toBeLessThan(10_000);
+  });
+
+  it("keeps a remembered device signed in for days, an ordinary session only 30 idle minutes", async () => {
+    const u = await newUser();
+    const first = await pending(u.id);
+    await challengeFor(first); // creates the authenticator secret
+    const secret = await secretOf(u.id);
+    await completeMfaLogin(first, freshCode(secret), meta);
+    const kept = await completeMfaLogin(await pending(u.id), freshCode(secret, 1), meta, { remember: true });
+    const plain = await createSession({ userId: u.id, mfa: true, amr: ["otp", "mfa"], authTime: new Date() });
+    expect(kept.expiresAt.getTime() - Date.now()).toBeGreaterThan(29 * 24 * 3600_000);
+    expect(plain.expiresAt.getTime() - Date.now()).toBeLessThan(13 * 3600_000);
+    const later = new Date(Date.now() + 2 * 3600_000); // two hours without activity
+    expect(await readSession(kept.token, later)).not.toBeNull();
+    expect(await readSession(plain.token, later)).toBeNull();
+    const muchLater = new Date(Date.now() + 8 * 24 * 3600_000); // eight idle days
+    expect(await readSession(kept.token, muchLater)).toBeNull();
   });
 });

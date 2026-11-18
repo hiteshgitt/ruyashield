@@ -38,7 +38,7 @@ export async function getAccount(s: SessionInfo, now = new Date()) {
     mfaEnabled: !!mfa?.enabledAt, recoveryLeft: mfa?.enabledAt ? await remainingRecoveryCodes(s.userId) : 0,
     sessions: live.map((x) => ({
       key: sessionKey(x.idHash), current: x.idHash === s.idHash, device: deviceLabel(x.userAgent),
-      ip: x.ip, createdAt: x.createdAt, lastSeenAt: x.lastSeenAt,
+      ip: x.ip, createdAt: x.createdAt, lastSeenAt: x.lastSeenAt, remembered: x.remember, expiresAt: x.expiresAt,
     })),
   };
 }

@@ -50,6 +50,7 @@ export const sessions = pgTable("sessions", {
   lastSeenAt: ts("last_seen_at").notNull().defaultNow(),
   expiresAt: ts("expires_at").notNull(),
   revokedAt: ts("revoked_at"),
+  remember: boolean("remember").notNull().default(false),
   ip: text("ip"),
   userAgent: text("user_agent"),
 });

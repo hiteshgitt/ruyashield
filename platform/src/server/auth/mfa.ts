@@ -122,7 +122,7 @@ export async function regenerateRecoveryCodes(userId: string): Promise<string[]>
 export type MfaLoginResult = { token: string; expiresAt: Date; returnTo: string; enrolled: boolean; usedRecovery: boolean };
 
 /** Finishes a pending login with a code. First-time users confirm enrollment and get their recovery codes. */
-export async function completeMfaLogin(pendingToken: string | undefined | null, code: string, meta: RequestMeta): Promise<MfaLoginResult> {
+export async function completeMfaLogin(pendingToken: string | undefined | null, code: string, meta: RequestMeta, opts: { remember?: boolean } = {}): Promise<MfaLoginResult> {
   const p = await pendingFor(pendingToken);
   if (!p) throw new AppError(410, "mfa_login_expired", "This sign-in has expired. Please sign in again.");
   if (await mfaRateLimited(p.userId)) throw new AppError(429, "rate_limited", "Too many wrong codes. Try again in 15 minutes.");
@@ -149,10 +149,11 @@ export async function completeMfaLogin(pendingToken: string | undefined | null, 
     await issueRecoveryReveal(p.userId, p.returnTo);
   }
   const amr = [...new Set([...p.amr, ...MFA_AMR])];
-  const s = await createSession({ userId: p.userId, mfa: true, amr, authTime: new Date(), ip: meta.ip, userAgent: meta.userAgent });
+  const remember = opts.remember === true;
+  const s = await createSession({ userId: p.userId, mfa: true, amr, authTime: new Date(), ip: meta.ip, userAgent: meta.userAgent, remember });
   await withOrg(null, async (tx) => {
     if (!wasEnrolled) await audit(tx, { actor: { type: "user", id: p.userId, ip: meta.ip }, action: "auth.mfa_enrolled" });
-    await audit(tx, { actor: { type: "user", id: p.userId, ip: meta.ip }, action: "auth.login", details: { mfa: true, amr, provider: p.issuer, method: how } });
+    await audit(tx, { actor: { type: "user", id: p.userId, ip: meta.ip }, action: "auth.login", details: { mfa: true, amr, provider: p.issuer, method: how, remember } });
   });
   return { ...s, returnTo: p.returnTo, enrolled: !wasEnrolled, usedRecovery: how === "recovery" };
 }

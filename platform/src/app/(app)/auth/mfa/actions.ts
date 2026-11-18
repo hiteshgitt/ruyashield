@@ -26,7 +26,7 @@ export async function verifyLoginCode(_prev: MfaState, f: FormData): Promise<Mfa
   let next: string;
   try {
     const jar = await cookies();
-    const r = await completeMfaLogin(jar.get(PENDING_COOKIE)?.value, codeOf(f), await requestMeta());
+    const r = await completeMfaLogin(jar.get(PENDING_COOKIE)?.value, codeOf(f), await requestMeta(), { remember: f.get("remember") === "on" });
     jar.set(sessionCookieName(), r.token, { httpOnly: true, sameSite: "lax", secure: secureCookies(), path: "/", expires: r.expiresAt });
     jar.delete({ name: PENDING_COOKIE, path: "/auth" });
     next = r.enrolled ? "/auth/mfa?saved=0" : safeReturnTo(r.returnTo);
