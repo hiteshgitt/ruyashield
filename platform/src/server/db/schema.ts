@@ -119,7 +119,7 @@ export const orgs = pgTable("orgs", {
   proRequestedBy: uuid("pro_requested_by"),
   region: text("region").notNull(),
   approverMustDiffer: boolean("approver_must_differ").notNull().default(true),
-  aiEnabled: boolean("ai_enabled").notNull().default(false),
+  aiEnabled: boolean("ai_enabled").notNull().default(true),
   agencyRequiresAttestation: boolean("agency_requires_attestation").notNull().default(true),
   killScanning: boolean("kill_scanning").notNull().default(false),
   killAi: boolean("kill_ai").notNull().default(false),

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { ReactNode } from "react";
 import type { Ctx } from "@/server/findings/findings";
-import { aiStatus, listAnalyses, listChat } from "@/server/ai/gateway";
+import { aiStatus, listAnalyses, listChat, requestAnalysis } from "@/server/ai/gateway";
 import { MAX_QUESTION_CHARS } from "@/server/ai/prompts";
 import { grantFor } from "@/server/policy/matrix";
 import { ActionForm } from "../../_components/ActionForm";
@@ -18,7 +18,7 @@ const n = (x: number) => x.toLocaleString("en-US");
 // AI output is advisory (RS-AI-001..003): it is labelled, cites evidence, and never changes the finding.
 // Everything Zealot says lives inside this one outlined panel so it can't be mistaken for check results or FixProof outcomes.
 export async function ZealotPanel({ c, findingId, remediation }: { c: Ctx; findingId: string; remediation: string | null }) {
-  const [st, history, threads] = await Promise.all([aiStatus(c), listAnalyses(c, findingId, 5), listChat(c, findingId)]);
+  const [st, firstHistory, threads] = await Promise.all([aiStatus(c), listAnalyses(c, findingId, 5), listChat(c, findingId)]);
   const canAsk = grantFor(c.principal.role, "ai.request") !== "N";
   const canPlan = grantFor(c.principal.role, "remediation.edit") !== "N";
   const blocked = st.killed ? "AI assistance is stopped by the organization kill switch."
@@ -26,6 +26,15 @@ export async function ZealotPanel({ c, findingId, remediation }: { c: Ctx; findi
     : !st.provider ? "No AI provider is configured on this deployment."
     : st.used >= st.budget ? "This month's AI token budget is used up."
     : null;
+  // Opening a finding explains it once: no button needed. The key includes the day, so a provider outage is
+  // retried at most once a day per finding (and a replay never calls the provider twice).
+  let history = firstHistory;
+  const explained = history.some((e) => e.analysis.useCase === "explain" && (e.analysis.status === "completed" || e.analysis.status === "inconclusive"));
+  if (!blocked && canAsk && st.released.explain && !explained && !c.principal.tokenScopes && !c.principal.breakGlassId) {
+    const key = `auto-explain-${findingId}-${new Date().toISOString().slice(0, 10)}`;
+    const done = await requestAnalysis(c, findingId, { useCase: "explain", idempotencyKey: key }).then(() => true, () => false);
+    if (done) history = await listAnalyses(c, findingId, 5);
+  }
   const manual = remediation ? <p className="small">Manual guidance: {remediation}</p> : null;
   const [latest, ...earlier] = history;
   return (

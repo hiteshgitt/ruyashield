@@ -50,11 +50,14 @@ async function member(ctx: LoadedPrincipal, role: "viewer" | "security_lead") {
 }
 
 run("AI gateway (P4)", () => {
-  it("is off until an admin turns it on, and needs a provider and a released prompt", async () => {
+  it("is on by default, an admin can turn it off, and it needs a provider and a released prompt", async () => {
     resetBreaker();
-    const { ctx, finding } = await fixture();
-    expect(await code(ask(ctx, finding.id))).toBe("409 ai_disabled");
-    await enable(ctx);
+    const { ctx, finding, user } = await fixture();
+    expect(await code(ask(ctx, finding.id))).toBe("ok");
+    await setAiSettings(ctx, { enabled: false, reason: "test opt-out" });
+    const off = (await loadPrincipal(user, ctx.org.id))!;
+    expect(await code(ask(off, finding.id))).toBe("409 ai_disabled");
+    await enable(off);
     expect(await code(ask(ctx, finding.id, "explain", undefined, null))).toBe("503 ai_unavailable");
     const unreleased: AiProvider = { ...fixtureProvider, model: "never-evaluated/1" };
     expect(await code(ask(ctx, finding.id, "explain", undefined, unreleased))).toBe("503 ai_not_released");
