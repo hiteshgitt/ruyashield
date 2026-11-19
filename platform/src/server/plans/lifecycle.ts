@@ -11,11 +11,11 @@ import { grantFor } from "../policy/matrix";
 import type { OrgFlags, Principal } from "../policy/policy";
 
 // Plans that change on their own (operators still switch plans by hand in /operator, which marks them 'manual'):
-// - trial:   the first organization a person creates gets 14 days of Pro, no card. Admins are reminded 3 days and
+// - trial:   the first organization a person creates gets 7 days of Pro, no card. Admins are reminded 3 days and
 //            1 day before the end (in-app and email); then the organization goes back to Free. One trial per person.
 // - ruyalab: Ruya Lab Pro on the creator's linked Ruya Lab account (accounts.ruyalab.com) makes the organization Pro.
 
-export const TRIAL_DAYS = 14;
+export const TRIAL_DAYS = 7;
 const DAY = 86_400_000;
 const REMINDERS = [3, 1] as const;
 const SERVICE = { type: "service" as const, id: "plans" };

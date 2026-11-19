@@ -414,7 +414,7 @@ function Pricing() {
           <span className="eyebrow">Pricing</span>
           <h2 id="pricing-title" className="display" style={{ marginTop: "1.25rem" }}>Built for three kinds of <em>teams.</em></h2>
         </div>
-        <p className="lead">Pricing hasn&rsquo;t been published yet. Sign in to use RuyaShield with your organization today.</p>
+        <p className="lead">Pricing hasn&rsquo;t been published yet. Your first organization starts with 7 days of RuyaShield Pro, no card needed, then stays on Free unless you request Pro.</p>
       </Reveal>
       <Reveal className="plans">
         {plans.map((p) => (
@@ -438,7 +438,7 @@ function Faq() {
     ["When is a finding marked fixed?", "Only after the original check is re-run and passes. Partial, failed, inconclusive and not-run results are shown as exactly that — none of them resolves a finding."],
     ["Does RuyaShield change my code?", "It can prepare a change on a separate branch in your connected repository after an approval, and test it in a sandbox. It doesn't merge or deploy anything."],
     ["Is a RuyaShield report a certification?", "No. Reports describe what was observed and verified. They are not a certification or a compliance attestation."],
-    ["How much does it cost?", "Pricing hasn't been published yet."],
+    ["How much does it cost?", "Pricing hasn't been published yet. The first organization you create gets 7 days of Pro free, with no card; after that it moves to the Free plan unless your team requests Pro."],
   ];
   return (
     <section id="faq" className="section wrap" aria-labelledby="faq-title">

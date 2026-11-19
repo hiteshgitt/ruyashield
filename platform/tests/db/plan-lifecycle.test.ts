@@ -27,13 +27,13 @@ async function withTrialsOn<T>(f: () => Promise<T>): Promise<T> {
 const orgRow = (id: string) => withOrg(id, (tx) => tx.select().from(orgs).where(eq(orgs.id, id))).then((r) => r[0]);
 
 run("Pro trial (database)", () => {
-  it("the first organization a person creates gets 14 days of Pro; the second starts on Free", async () => {
+  it("the first organization a person creates gets 7 days of Pro; the second starts on Free", async () => {
     const user = await newUser();
     const first = await withTrialsOn(() => createOrg(user, { name: `Trial ${randomUUID().slice(0, 8)}` }));
     const second = await withTrialsOn(() => createOrg(user, { name: `Trial ${randomUUID().slice(0, 8)}` }));
     const a = await orgRow(first.id);
     expect(a).toMatchObject({ plan: "pro", planSource: "trial" });
-    expect(Math.round((a.trialEndsAt!.getTime() - Date.now()) / 86_400_000)).toBe(14);
+    expect(Math.round((a.trialEndsAt!.getTime() - Date.now()) / 86_400_000)).toBe(7);
     expect(await orgRow(second.id)).toMatchObject({ plan: "free", planSource: null, trialEndsAt: null });
     // The trial was this person's one trial, so the Free organization cannot start another.
     await expect(startTrial((await loadPrincipal(user, second.id))!)).rejects.toMatchObject({ code: "trial_used" });

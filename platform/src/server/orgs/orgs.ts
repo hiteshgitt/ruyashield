@@ -51,7 +51,7 @@ export async function createOrg(s: SessionInfo, input: unknown, meta: { ip?: str
   const id = randomUUID();
   await withOrg(id, async (tx) => {
     // RUYA_DEFAULT_ORG_PLAN=pro is for test databases and self-hosted installs. Otherwise the first organization a
-    // person creates gets the 14-day Pro trial (RUYA_ORG_TRIAL=off turns that off), and later ones start on Free.
+    // person creates gets the 7-day Pro trial (RUYA_ORG_TRIAL=off turns that off), and later ones start on Free.
     const fixedPro = process.env.RUYA_DEFAULT_ORG_PLAN === "pro";
     const trialEnds = !fixedPro && process.env.RUYA_ORG_TRIAL !== "off" ? await claimTrial(tx, s.userId) : null;
     await tx.insert(orgs).values({
