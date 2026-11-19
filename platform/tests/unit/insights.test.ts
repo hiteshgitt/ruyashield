@@ -43,7 +43,7 @@ describe("weekStart", () => {
 describe("SECURITY_AREAS", () => {
   it("only claims coverage for check keys the platform actually runs", () => {
     const covered = SECURITY_AREAS.flatMap((a) => a.checks).sort();
-    expect(covered).toEqual(["code.iac", "code.sast", "code.secrets", "container.image", "deps.osv", "discovery.ct", "dns.caa", "dns.email_posture", "dns.takeover", "http.compromise", "http.cors", "http.exposure", "http.security_headers", "net.exposed_services", "tls.cert_expiry", "tls.config", "web.blocklist", "web.technology", "webmonitor.packages"]);
+    expect(covered).toEqual(["code.iac", "code.sast", "code.secrets", "container.image", "deps.osv", "discovery.ct", "dns.caa", "dns.email_posture", "dns.takeover", "http.compromise", "http.cors", "http.exposure", "http.security_headers", "net.exposed_services", "tls.cert_expiry", "tls.config", "web.blocklist", "web.technology", "webmonitor.files", "webmonitor.packages"]);
   });
 });
 

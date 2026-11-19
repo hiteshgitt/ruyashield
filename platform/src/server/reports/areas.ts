@@ -33,7 +33,7 @@ export const SECURITY_AREAS: readonly SecurityArea[] = [
     why: "An outdated base image ships known-vulnerable system packages with every deploy." },
   { key: "iac", label: "Infrastructure as code", tier: "important", checks: ["code.iac"],
     why: "One wrong line in Terraform, Kubernetes or Docker config can open a database to the internet or give a container root on the host." },
-  { key: "software", label: "Outdated software and platform", tier: "important", checks: ["web.technology", "webmonitor.packages"],
+  { key: "software", label: "Outdated software and platform", tier: "important", checks: ["web.technology", "webmonitor.packages", "webmonitor.files"],
     why: "An out-of-date CMS, end-of-life PHP or an old JavaScript library carries publicly known flaws attackers scan for." },
   { key: "cors", label: "Cross-origin access (CORS)", tier: "important", checks: ["http.cors"],
     why: "A CORS policy that trusts any website lets other sites read your users' data while they are signed in." },
