@@ -9,6 +9,7 @@ import { createExposedServicesAdapter } from "./ports";
 import { createSastAdapter } from "./sast";
 import { createIacAdapter } from "./iac";
 import { createTechnologyAdapter } from "./technology";
+import { createWebMonitorPackagesAdapter } from "../webmonitor/packages";
 import { createBlocklistAdapter } from "./blocklist";
 import { createCtAdapter } from "./ct";
 import { createTlsConfigAdapter } from "./tlsconfig";
@@ -282,4 +283,4 @@ const caa: CheckAdapter = {
 };
 
 /** The executable catalogue. Anything not listed here cannot run, whatever the database says. */
-export const ADAPTERS: ReadonlyMap<string, CheckAdapter> = new Map([tls, headers, email, caa, osv, secrets, createSastAdapter(), createExposedServicesAdapter(), createCtAdapter(), createTlsConfigAdapter(), createExposureAdapter(), createContainerImageAdapter(), createCompromiseAdapter(), createCorsAdapter(), createTakeoverAdapter(), createIacAdapter(), createBlocklistAdapter(), createTechnologyAdapter()].map((a) => [a.id, a]));
+export const ADAPTERS: ReadonlyMap<string, CheckAdapter> = new Map([tls, headers, email, caa, osv, secrets, createSastAdapter(), createExposedServicesAdapter(), createCtAdapter(), createTlsConfigAdapter(), createExposureAdapter(), createContainerImageAdapter(), createCompromiseAdapter(), createCorsAdapter(), createTakeoverAdapter(), createIacAdapter(), createBlocklistAdapter(), createTechnologyAdapter(), createWebMonitorPackagesAdapter()].map((a) => [a.id, a]));
