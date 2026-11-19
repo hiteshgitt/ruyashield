@@ -13,6 +13,9 @@ const args = process.argv.slice(2);
 const flag = (n: string) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined; };
 const providerName = flag("--provider") ?? process.env.RUYA_AI_PROVIDER ?? "disabled";
 const promote = args.includes("--promote");
+// --only explain|remediation|chat runs one prompt; --pause <ms> waits between cases (free tiers' per-minute limits).
+const only = flag("--only");
+const pauseMs = Number(flag("--pause") ?? 0) || 0;
 const provider = getProvider({ ...process.env, RUYA_AI_PROVIDER: providerName });
 if (!provider) { console.error(`No provider "${providerName}" is configured.`); process.exit(2); }
 
@@ -23,8 +26,9 @@ await client.connect();
 let failed = false;
 try {
   for (const useCase of Object.keys(PROMPTS) as AiUseCase[]) {
+    if (only && useCase !== only) continue;
     const p = PROMPTS[useCase];
-    const report = await runEval(provider, GOLDEN.filter((c) => c.useCase === useCase));
+    const report = await runEval(provider, GOLDEN.filter((c) => c.useCase === useCase), { pauseMs });
     const sha = templateSha256(p);
     const run = await client.query<{ id: string }>(
       `INSERT INTO ai_eval_runs (prompt_id, prompt_version, template_sha256, provider, model, metrics, thresholds, passed)

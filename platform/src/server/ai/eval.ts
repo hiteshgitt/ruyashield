@@ -98,9 +98,13 @@ export async function runEvalCase(p: AiProvider, c: EvalCase): Promise<CaseResul
   }
 }
 
-export async function runEval(p: AiProvider, cases: EvalCase[] = GOLDEN): Promise<EvalReport> {
+/** `pauseMs` waits between cases, for providers with a low per-minute token limit (e.g. free tiers). */
+export async function runEval(p: AiProvider, cases: EvalCase[] = GOLDEN, opts: { pauseMs?: number } = {}): Promise<EvalReport> {
   const results: CaseResult[] = [];
-  for (const c of cases) results.push(await runEvalCase(p, c)); // sequential: predictable cost and rate
+  for (const [i, c] of cases.entries()) {
+    if (i > 0 && opts.pauseMs) await new Promise((r) => setTimeout(r, opts.pauseMs));
+    results.push(await runEvalCase(p, c)); // sequential: predictable cost and rate
+  }
   const sum = (f: (r: CaseResult) => number) => results.reduce((a, r) => a + f(r), 0);
   const raw = sum((r) => r.rawClaims);
   const inc = results.filter((r) => r.inconclusiveOk !== null);
