@@ -521,6 +521,10 @@ html:has(.app) body { background: #0b0a10; color: #ecebf3; margin: 0; }
 
 /* ---------- UI-7: settings ---------- */
 .app .inline-form { flex-wrap: wrap; align-items: center; gap: .5rem; }
+/* Labelled fields: line the button up with the fields, not with the middle of label + field, and give every control
+   in the row the same height so field and button edges match. */
+.app .inline-form:has(> label) { align-items: flex-end; }
+.app :is(.inline-form, .row) :is(button:not(.link), input:not([type=checkbox]):not([type=radio]):not([type=hidden]), select) { height: 2.5rem; min-height: 2.5rem; }
 .app .inline-form > div { display: contents; }
 .app .inline-form label { margin: 0; }
 .app .inline-form > :is(select, input:not([type=checkbox]):not([type=hidden])) { margin-top: 0; width: auto; }

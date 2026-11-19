@@ -67,7 +67,7 @@ async function AiSettings({ c }: { c: Awaited<ReturnType<typeof pageOrg>> }) {
         <dt>Provider</dt>
         <dd><span className="mono">{s.provider ? `${s.provider}/${s.model}` : "none configured (RUYA_AI_PROVIDER)"}</span>{s.provider === "fixture" && <span className="muted"> — offline fixture for development; not a language model</span>}</dd>
         <dt>Released</dt>
-        <dd className="badge-row">{(["explain", "remediation"] as const).map((u) => <span key={u} className={`badge ${s.released[u] ? "ok" : "warn"}`}>{u}: {s.released[u] ? "released" : "not released"}</span>)}</dd>
+        <dd className="badge-row">{(["explain", "remediation", "chat"] as const).map((u) => <span key={u} className={`badge ${s.released[u] ? "ok" : "warn"}`}>{u}: {s.released[u] ? "released" : "not released"}</span>)}</dd>
         <dt>Tokens ({s.period})</dt>
         <dd>
           {s.used.toLocaleString()} of {s.budget.toLocaleString()} used
