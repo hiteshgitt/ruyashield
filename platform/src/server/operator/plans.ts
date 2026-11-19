@@ -19,11 +19,13 @@ export type OrgPlan = (typeof ORG_PLANS)[number];
 
 export async function listOrgPlans(s: SessionInfo) {
   if (!isOperator(s.email)) throw new AppError(403, "forbidden");
-  const r = await db.execute<{ id: string; name: string; slug: string; plan: string; created_at: Date; members: string; pro_requested_at: Date | null }>(
-    sql`SELECT id, name, slug, plan, created_at, members, pro_requested_at FROM operator_org_list()`);
+  const r = await db.execute<{ id: string; name: string; slug: string; plan: string; created_at: Date; members: string; pro_requested_at: Date | null; plan_source: string | null; trial_ends_at: Date | null }>(
+    sql`SELECT id, name, slug, plan, created_at, members, pro_requested_at, plan_source, trial_ends_at FROM operator_org_list()`);
   return r.rows.map((o) => ({
     id: o.id, name: o.name, slug: o.slug, plan: o.plan, createdAt: new Date(o.created_at), members: Number(o.members),
     proRequestedAt: o.pro_requested_at ? new Date(o.pro_requested_at) : null,
+    planSource: (o.plan_source ?? null) as "manual" | "trial" | "ruyalab" | null,
+    trialEndsAt: o.trial_ends_at ? new Date(o.trial_ends_at) : null,
   }));
 }
 

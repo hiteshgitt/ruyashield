@@ -6,6 +6,7 @@ import { orgs, users } from "@/server/db/schema";
 import { createOrg } from "@/server/orgs/orgs";
 import { loadPrincipal } from "@/server/principal";
 import { startTrial, sweepOrgPlans } from "@/server/plans/lifecycle";
+import { listOrgPlans, setOrgPlan } from "@/server/operator/plans";
 import type { SessionInfo } from "@/server/auth/session";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
@@ -62,6 +63,25 @@ run("Pro trial (database)", () => {
       expect(await orgRow(o.id)).toMatchObject({ plan: "pro", planSource: "trial" });
     } finally {
       process.env.RUYA_DEFAULT_ORG_PLAN = prev;
+    }
+  });
+
+  it("the operator console shows a trial, and keeping Pro makes it manual so the sweep never ends it", async () => {
+    const user = await newUser();
+    const o = await withTrialsOn(() => createOrg(user, { name: `Keep ${randomUUID().slice(0, 8)}` }));
+    const opEmail = `op-${randomUUID()}@ruya-tests.invalid`;
+    const operator = { ...(await newUser()), email: opEmail };
+    const prev = process.env.RUYA_OPERATOR_EMAILS;
+    process.env.RUYA_OPERATOR_EMAILS = opEmail;
+    try {
+      expect((await listOrgPlans(operator)).find((x) => x.id === o.id)).toMatchObject({ plan: "pro", planSource: "trial" });
+      await setOrgPlan(operator, { orgSlug: o.slug, plan: "pro" });
+      expect(await orgRow(o.id)).toMatchObject({ plan: "pro", planSource: "manual" });
+      await withOrg(o.id, (tx) => tx.update(orgs).set({ trialEndsAt: new Date(Date.now() - 60_000) }).where(eq(orgs.id, o.id)));
+      await sweepOrgPlans();
+      expect(await orgRow(o.id)).toMatchObject({ plan: "pro", planSource: "manual" });
+    } finally {
+      process.env.RUYA_OPERATOR_EMAILS = prev;
     }
   });
 });

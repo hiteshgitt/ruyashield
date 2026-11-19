@@ -9,6 +9,8 @@ import { fmt } from "../_lib/page";
 import { Loading, PageHeader } from "../_components/Page";
 import { TableWrap } from "../_components/TableWrap";
 
+const SOURCE = { manual: "Set by an operator", trial: "Trial", ruyalab: "Ruya Lab Pro" } as const;
+
 export default function OperatorPage() {
   return (
     <>
@@ -39,8 +41,18 @@ async function Operator() {
                   <td>{o.name}<div className="mono small muted">{o.slug}</div></td>
                   <td>{o.members}</td>
                   <td className="small nowrap">{fmt(o.createdAt)}</td>
-                  <td><span className={`badge${o.plan === "pro" ? " pro" : ""}`}>{o.plan === "pro" ? "Pro" : o.plan === "free" ? "Free" : o.plan}</span>{o.proRequestedAt && o.plan !== "pro" && <div className="small"><span className="badge warn">Pro requested {fmt(o.proRequestedAt)}</span></div>}</td>
                   <td>
+                    <span className={`badge${o.plan === "pro" ? " pro" : ""}`}>{o.plan === "pro" ? "Pro" : o.plan === "free" ? "Free" : o.plan}</span>
+                    {o.plan === "pro" && o.planSource && <div className="small muted">{SOURCE[o.planSource]}{o.planSource === "trial" && o.trialEndsAt ? `, ends ${fmt(o.trialEndsAt)}` : ""}</div>}
+                    {o.proRequestedAt && (o.plan !== "pro" || o.planSource === "trial") && <div className="small"><span className="badge warn">Pro requested {fmt(o.proRequestedAt)}</span></div>}
+                  </td>
+                  <td>
+                    {o.plan === "pro" && (o.planSource === "trial" || o.planSource === "ruyalab") && (
+                      <ActionForm action={setOrgPlanAction} submit="Keep Pro permanently" variant="primary" className="row inline-form">
+                        <input type="hidden" name="orgSlug" value={o.slug} />
+                        <input type="hidden" name="plan" value="pro" />
+                      </ActionForm>
+                    )}
                     <ActionForm action={setOrgPlanAction} submit={o.plan === "pro" ? "Move to Free" : "Upgrade to Pro"} variant={o.plan === "pro" ? "secondary" : "primary"} className="row inline-form">
                       <input type="hidden" name="orgSlug" value={o.slug} />
                       <input type="hidden" name="plan" value={o.plan === "pro" ? "free" : "pro"} />
