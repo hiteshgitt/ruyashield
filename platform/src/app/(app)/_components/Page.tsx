@@ -74,6 +74,16 @@ export function ProGate({ title, children, features = [], rows = 4, compact = fa
 }
 
 /** Slim banner on every page of a Free organization, so the limits are clear before anyone looks for data. */
+export function TrialBanner({ daysLeft }: { daysLeft: number }) {
+  return (
+    <div className="free-banner" role="note">
+      <span className="free-banner-badge">Pro trial</span>
+      <span className="free-banner-text">Everything is unlocked for {daysLeft === 1 ? "1 more day" : `${daysLeft} more days`}. After that your organization goes back to Free unless Pro is activated.</span>
+      <a className="free-banner-cta" href="/settings/plan">Keep Pro <span aria-hidden="true">→</span></a>
+    </div>
+  );
+}
+
 export function FreeBanner() {
   return (
     <div className="free-banner" role="note">

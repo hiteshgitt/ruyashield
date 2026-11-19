@@ -10,12 +10,13 @@ import { runRetention } from "../src/server/retention/retention";
 import { log } from "../src/server/log";
 import { pollAttackSources } from "../src/server/attacks/attacks";
 import { geoip } from "../src/server/attacks/geoip";
+import { sweepOrgPlans } from "../src/server/plans/lifecycle";
 
-const POLL_MS = 2000, SCHEDULE_MS = 60_000, SWEEP_MS = 15_000, RETENTION_MS = 24 * 3_600_000;
+const POLL_MS = 2000, SCHEDULE_MS = 60_000, SWEEP_MS = 15_000, RETENTION_MS = 24 * 3_600_000, PLANS_MS = 5 * 60_000;
 let stopping = false;
 for (const s of ["SIGINT", "SIGTERM"] as const) process.on(s, () => { stopping = true; });
 
-let lastSchedule = 0, lastSweep = 0, lastRetention = 0;
+let lastSchedule = 0, lastSweep = 0, lastRetention = 0, lastPlans = 0;
 log.info("worker.start", { pid: process.pid });
 while (!stopping) {
   try {
@@ -37,6 +38,12 @@ while (!stopping) {
       } catch (e) {
         log.error("worker.attack_poll_error", { error: e instanceof Error ? e.message : String(e) });
       }
+    }
+    if (Date.now() - lastPlans > PLANS_MS) {
+      lastPlans = Date.now();
+      // Trials ending, trial reminders and Ruya Lab Pro on the creator's account.
+      const p = await sweepOrgPlans();
+      if (p.changed || p.reminded) log.info("worker.org_plans", p);
     }
     if (Date.now() - lastRetention > RETENTION_MS) {
       lastRetention = Date.now();

@@ -23,6 +23,7 @@ export const users = pgTable("users", {
   emailVerifiedAt: ts("email_verified_at"),
   /** accounts.ruyalab.com subject, once this user has signed in with Ruya Lab (0032). */
   ruyalabSub: text("ruyalab_sub"),
+  trialUsedAt: ts("trial_used_at"),
   createdAt: ts("created_at").notNull().defaultNow(),
 });
 
@@ -111,6 +112,9 @@ export const orgs = pgTable("orgs", {
   name: text("name").notNull(),
   slug: text("slug").notNull(),
   plan: text("plan").notNull().default("free"),
+  planSource: text("plan_source").$type<"manual" | "trial" | "ruyalab">(),
+  trialEndsAt: ts("trial_ends_at"),
+  trialReminded: integer("trial_reminded").notNull().default(0),
   proRequestedAt: ts("pro_requested_at"),
   proRequestedBy: uuid("pro_requested_by"),
   region: text("region").notNull(),

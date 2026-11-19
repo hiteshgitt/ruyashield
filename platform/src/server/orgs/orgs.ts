@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db, withOrg, isUuid, type Tx } from "../db/client";
 import { clientGroups, invites, memberClientGroups, memberships, orgs, users } from "../db/schema";
 import { audit } from "../audit/audit";
+import { claimTrial } from "../plans/lifecycle";
 import { AppError, notFound, isUniqueViolation } from "../errors";
 import { authorize, type OrgFlags, type Principal } from "../policy/policy";
 import { enqueue } from "../outbox/outbox";
@@ -49,9 +50,14 @@ export async function createOrg(s: SessionInfo, input: unknown, meta: { ip?: str
 
   const id = randomUUID();
   await withOrg(id, async (tx) => {
-    // New organizations start on Free; RUYA_DEFAULT_ORG_PLAN=pro is for test databases and self-hosted installs.
-    const plan = process.env.RUYA_DEFAULT_ORG_PLAN === "pro" ? "pro" : "free";
-    await tx.insert(orgs).values({ id, name, slug, plan, region: process.env.DATA_REGION ?? "default", createdBy: s.userId });
+    // RUYA_DEFAULT_ORG_PLAN=pro is for test databases and self-hosted installs. Otherwise the first organization a
+    // person creates gets the 14-day Pro trial (RUYA_ORG_TRIAL=off turns that off), and later ones start on Free.
+    const fixedPro = process.env.RUYA_DEFAULT_ORG_PLAN === "pro";
+    const trialEnds = !fixedPro && process.env.RUYA_ORG_TRIAL !== "off" ? await claimTrial(tx, s.userId) : null;
+    await tx.insert(orgs).values({
+      id, name, slug, region: process.env.DATA_REGION ?? "default", createdBy: s.userId,
+      ...(fixedPro ? { plan: "pro", planSource: "manual" as const } : trialEnds ? { plan: "pro", planSource: "trial" as const, trialEndsAt: trialEnds } : { plan: "free" }),
+    });
     await tx.insert(memberships).values({ orgId: id, userId: s.userId, role: "org_admin" });
     await audit(tx, { actor: { type: "user", id: s.userId, ip: meta.ip }, action: "org.created", target: { type: "org", id }, requestId: meta.requestId, details: { name, slug } });
   }).catch((e: unknown) => {

@@ -27,6 +27,7 @@ import * as tokenSvc from "@/server/tokens/tokens";
 import { createWebMonitorToken } from "@/server/webmonitor/watch";
 import * as breakGlassSvc from "@/server/operator/breakglass";
 import * as orgPlanSvc from "@/server/operator/plans";
+import * as planLifecycle from "@/server/plans/lifecycle";
 import * as accountSvc from "@/server/account/account";
 import { allowPrivateFromEnv } from "@/server/net/egress";
 import { AppError } from "@/server/errors";
@@ -643,6 +644,13 @@ export async function requestProAction(): Promise<ActionState> {
   return run(async () => {
     await orgPlanSvc.requestPro(await requireOrgContext(), await requestMeta());
     return { ok: "Pro requested. We will switch your organization and let your admins know." };
+  });
+}
+
+export async function startTrialAction(): Promise<ActionState> {
+  return run(async () => {
+    const r = await planLifecycle.startTrial(await requireOrgContext(), await requestMeta());
+    return { ok: `Your Pro trial is on until ${r.endsAt.toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "UTC" })}.` };
   });
 }
 

@@ -1,3 +1,4 @@
+import { sweepOrgPlans } from "../plans/lifecycle";
 import { and, count, eq, gt, inArray, lt } from "drizzle-orm";
 import * as oidc from "openid-client";
 import { db, withOrg } from "../db/client";
@@ -149,6 +150,8 @@ export async function completeLogin(input: CallbackInput, meta: RequestMeta & { 
   if (await rateLimited([acctKey])) throw new AppError(429, "rate_limited", "Too many failed sign-in attempts. Try again later.");
 
   const user = ls.provider === "ruyalab" ? await linkRuyaLabUser(id) : await upsertUser(id);
+  // Ruya Lab Pro on this account applies at once rather than at the next 5-minute sweep (best effort, not awaited).
+  if (ls.provider === "ruyalab" && !user.disabledAt) void sweepOrgPlans().catch(() => undefined);
   if (user.disabledAt) {
     await recordFailure([...ipKey, acctKey], meta, "user_disabled", id.email);
     throw new AppError(403, "user_disabled", "This account is disabled.");

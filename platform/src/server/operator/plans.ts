@@ -36,9 +36,12 @@ export async function setOrgPlan(s: SessionInfo, input: unknown, meta: { ip?: st
   const o = (await db.execute<{ id: string; name: string }>(sql`SELECT id, name FROM operator_org_lookup(${v.data.orgSlug})`)).rows[0];
   if (!o) throw new AppError(404, "not_found", "No organization with that slug.");
   await withOrg(o.id, async (tx) => {
-    const before = (await tx.select({ plan: orgs.plan }).from(orgs).where(eq(orgs.id, o.id)))[0]?.plan;
-    if (before === v.data.plan) return;
-    await tx.update(orgs).set({ plan: v.data.plan, ...(v.data.plan === "pro" ? { proRequestedAt: null, proRequestedBy: null } : {}) }).where(eq(orgs.id, o.id));
+    const was = (await tx.select({ plan: orgs.plan, source: orgs.planSource }).from(orgs).where(eq(orgs.id, o.id)))[0];
+    const before = was?.plan;
+    // Switching a trial or Ruya Lab Pro organization to Pro still makes it manual (it then never ends on its own).
+    if (before === v.data.plan && (v.data.plan === "free" || was?.source === "manual")) return;
+    // An operator's choice is manual: never ended by the trial sweep or the Ruya Lab sync.
+    await tx.update(orgs).set({ plan: v.data.plan, planSource: v.data.plan === "pro" ? "manual" : null, ...(v.data.plan === "pro" ? { proRequestedAt: null, proRequestedBy: null } : {}) }).where(eq(orgs.id, o.id));
     await audit(tx, {
       actor: { type: "user", id: s.userId, ip: meta.ip }, action: "org.plan_changed", target: { type: "org", id: o.id },
       requestId: meta.requestId, details: { from: before, to: v.data.plan },
@@ -56,7 +59,9 @@ export async function setOrgPlan(s: SessionInfo, input: unknown, meta: { ip?: st
 
 /** An org admin asks for Pro from the plan page: recorded on the org, audited, and emailed to the operators. */
 export async function requestPro(c: { principal: Principal; org: OrgFlags & { id: string; name?: string } }, meta: { ip?: string | null; requestId?: string | null } = {}) {
-  if (c.org.plan === "pro") throw new AppError(409, "already_pro", "This organization is already on Pro.");
+  // A trial counts as Free here: asking during the trial keeps Pro after it ends.
+  const source = (await withOrg(c.org.id, (tx) => tx.select({ s: orgs.planSource }).from(orgs).where(eq(orgs.id, c.org.id))))[0]?.s;
+  if (c.org.plan === "pro" && source !== "trial") throw new AppError(409, "already_pro", "This organization is already on Pro.");
   // Org admins only; asking for Pro changes nothing by itself, so it does not need a fresh MFA step-up.
   if (grantFor(c.principal.role, "org.settings.edit") === "N" || c.principal.tokenScopes || c.principal.breakGlassId) throw new AppError(403, "forbidden");
   const first = await withOrg(c.org.id, async (tx) => {

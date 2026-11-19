@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { unstable_rethrow } from "next/navigation";
 import { getBearerContext, getContext } from "@/server/context";
 import { AppError, isAppError } from "@/server/errors";
 import { log } from "@/server/log";
@@ -21,6 +22,8 @@ export async function api(fn: (c: NonNullable<Awaited<ReturnType<typeof getConte
     const out = await fn(ctx);
     return out instanceof Response ? out : NextResponse.json(out, { headers: NO_STORE });
   } catch (e) {
+    // Next's own control flow (prerender bail-out, redirects) must reach Next, not become a 500 or an error log.
+    unstable_rethrow(e);
     if (isAppError(e)) return NextResponse.json({ error: { code: e.code, message: e.message } }, { status: e.status, headers: NO_STORE });
     log.error("api.error", { error: e instanceof Error ? e.message : String(e) });
     return NextResponse.json({ error: { code: "internal" } }, { status: 500, headers: NO_STORE });
