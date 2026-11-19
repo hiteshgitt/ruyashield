@@ -4,7 +4,8 @@ import { parseBundle, type ChatMessage } from "./prompts";
 //   disabled (default) — no provider; AI requests return 503 ai_unavailable.
 //   fixture            — deterministic offline stand-in for development, tests and eval. It is NOT a language model
 //                        and says so in every summary.
-//   openai             — any OpenAI-compatible chat-completions endpoint (OPENAI_BASE_URL, OPENAI_API_KEY, OPENAI_MODEL).
+//   openai             — any OpenAI-compatible chat-completions endpoint (OPENAI_BASE_URL, OPENAI_API_KEY, OPENAI_MODEL,
+//                        optional OPENAI_REASONING_EFFORT, e.g. "none" for Gemini).
 // Providers receive only the redacted bundle; no tools/functions are ever offered to the model.
 
 export interface CompletionRequest { messages: ChatMessage[]; maxTokens: number; signal?: AbortSignal }
@@ -73,6 +74,9 @@ export function openAiProvider(env: NodeJS.ProcessEnv = process.env, fetchImpl: 
   const model = env.OPENAI_MODEL;
   if (!key || !model) return null;
   const base = (env.OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/+$/, "");
+  // Optional, sent only when set: e.g. "none" for Gemini, whose hidden reasoning otherwise uses up max_tokens and
+  // cuts the JSON reply short. Models that do not know the field are never sent it.
+  const reasoningEffort = env.OPENAI_REASONING_EFFORT?.trim();
   return {
     name: "openai",
     model,
@@ -82,7 +86,7 @@ export function openAiProvider(env: NodeJS.ProcessEnv = process.env, fetchImpl: 
         r = await fetchImpl(`${base}/chat/completions`, {
           method: "POST", signal, redirect: "error",
           headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
-          body: JSON.stringify({ model, messages, temperature: 0, max_tokens: maxTokens, response_format: { type: "json_object" } }),
+          body: JSON.stringify({ model, messages, temperature: 0, max_tokens: maxTokens, response_format: { type: "json_object" }, ...(reasoningEffort ? { reasoning_effort: reasoningEffort } : {}) }),
         });
       } catch (e) {
         if ((e as Error).name === "AbortError" || (e as Error).name === "TimeoutError") throw new ProviderError("timeout", "Provider timed out.");
