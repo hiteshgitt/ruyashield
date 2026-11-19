@@ -10,6 +10,7 @@ import type { CheckAdapter, CheckResult } from "@/server/assessments/checks";
 import type { SessionInfo } from "@/server/auth/session";
 import { createApiToken, resolveApiToken } from "@/server/tokens/tokens";
 import { hostPosture } from "@/server/webmonitor/posture";
+import { audit } from "@/server/audit/audit";
 
 // Needs a migrated database reachable as the runtime role (ruya_app, NOBYPASSRLS). Skipped otherwise.
 const run = process.env.DATABASE_URL ? describe : describe.skip;
@@ -74,6 +75,27 @@ run("WebMonitor posture read model (database)", () => {
     const t = await createApiToken(a.ctx, { name: "assets-only", scopes: ["assets:read"], days: 1 });
     const r = await hostPosture((await resolveApiToken(t.token))!, [a.asset.host, b.asset.host]);
     expect(r.hosts[0]).toMatchObject({ tracked: true, findings: null });
+    expect(r.hosts[1]).toEqual({ host: b.asset.host, tracked: false });
+  });
+
+  it("lists recent edge changes for the site, newest first, and not another org's", async () => {
+    const a = await orgWithAsset();
+    const b = await orgWithAsset();
+    const actor = { type: "user" as const, id: a.user.userId };
+    await withOrg(a.org.id, async (tx) => {
+      await audit(tx, { actor, action: "edge.applied", target: { type: "asset", id: a.asset.id }, details: { headers: ["X-Frame-Options: DENY"] } });
+      await audit(tx, { actor, action: "edge.apply_failed", target: { type: "asset", id: a.asset.id }, outcome: "error", details: {} });
+    });
+    await withOrg(a.org.id, (tx) => audit(tx, { actor, action: "edge.undone", target: { type: "asset", id: a.asset.id }, details: {} }));
+    await withOrg(b.org.id, (tx) => audit(tx, { actor: { type: "user", id: b.user.userId }, action: "edge.applied", target: { type: "asset", id: b.asset.id }, details: {} }));
+
+    const t = await createApiToken(a.ctx, { name: "webmonitor", scopes: ["assets:read", "findings:read"], days: 1 });
+    const r = await hostPosture((await resolveApiToken(t.token))!, [a.asset.host, b.asset.host]);
+    const h = r.hosts[0];
+    if (!h.tracked) throw new Error("expected tracked host");
+    expect(h.changes.map((c) => c.kind)).toEqual(["edge_undone", "edge_applied"]);
+    expect(h.changes[0].link).toContain(`/assets/${a.asset.id}`);
+    expect(h.changes[1].at).toBeInstanceOf(Date);
     expect(r.hosts[1]).toEqual({ host: b.asset.host, tracked: false });
   });
 
