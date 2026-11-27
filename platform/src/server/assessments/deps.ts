@@ -237,6 +237,19 @@ export interface OsvVuln {
   affected?: { package?: { ecosystem?: string; name?: string }; ranges?: { type?: string; events?: Record<string, string>[] }[]; versions?: string[]; database_specific?: { severity?: string }; ecosystem_specific?: { severity?: string } }[];
 }
 
+/** The advisory's CVSS: the highest-scoring v3.x vector, else a v4.0 vector (not scored here). */
+export function cvssOf(v: OsvVuln): { score: number | null; vector: string } | null {
+  let best: { score: number; vector: string } | null = null;
+  for (const s of v.severity ?? []) {
+    if (s.type !== "CVSS_V3") continue;
+    const n = cvss3Score(s.score);
+    if (n !== null && (!best || n > best.score)) best = { score: n, vector: s.score };
+  }
+  if (best) return best;
+  const v4 = (v.severity ?? []).find((s) => s.type === "CVSS_V4" && /^CVSS:4\.0\//.test(s.score));
+  return v4 ? { score: null, vector: v4.score } : null;
+}
+
 /** Severity from the CVSS v3 vector, else the advisory's own label. null = OSV gave no usable severity. */
 export function severityOf(v: OsvVuln): Severity | null {
   for (const s of v.severity ?? []) {
@@ -344,7 +357,10 @@ const display = (p: Pkg) => `${p.name} ${p.version}`;
 const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
 
 export function dependencyFindings(lock: Lockfile, pkg: Pkg, vulns: OsvVuln[]): FindingCandidate {
-  const rows = vulns.map((v) => ({ v, sev: severityOf(v), fixed: fixedVersion(v, pkg) }));
+  const rows = vulns.map((v) => ({ v, sev: severityOf(v), fixed: fixedVersion(v, pkg), cvss: cvssOf(v) }));
+  // The finding carries the highest-scoring advisory's vector (a v4.0 vector only when none can be scored).
+  const scored = rows.filter((r) => r.cvss?.score != null).sort((a, b) => b.cvss!.score! - a.cvss!.score!)[0];
+  const cvssVector = (scored ?? rows.find((r) => r.cvss))?.cvss?.vector;
   const known = rows.filter((r) => r.sev);
   const worst = known.reduce<Severity | null>((w, r) => (!w || SEV_RANK[r.sev!] > SEV_RANK[w] ? r.sev : w), null);
   const unfixed = rows.filter((r) => !r.fixed).map((r) => r.v.id);
@@ -366,10 +382,11 @@ export function dependencyFindings(lock: Lockfile, pkg: Pkg, vulns: OsvVuln[]): 
     evidence: {
       ecosystem: pkg.ecosystem, package: pkg.name, installedVersion: pkg.version, fixedVersion: target,
       lockfile: lock.path, lockfileSha256: lock.sha256, cves: cves.slice(0, 20),
-      advisories: rows.slice(0, 20).map((r) => ({ id: r.v.id, aliases: (r.v.aliases ?? []).slice(0, 5), severity: r.sev, fixed: r.fixed, summary: clip(r.v.summary ?? "", 200), url: `https://osv.dev/vulnerability/${r.v.id}` })),
+      advisories: rows.slice(0, 20).map((r) => ({ id: r.v.id, aliases: (r.v.aliases ?? []).slice(0, 5), severity: r.sev, cvss: r.cvss?.score ?? null, fixed: r.fixed, summary: clip(r.v.summary ?? "", 200), url: `https://osv.dev/vulnerability/${r.v.id}` })),
       ...(rows.length > 20 ? { advisoriesOmitted: rows.length - 20 } : {}),
     },
     remediation: clip(remediation, 1000),
+    ...(cvssVector && cvssVector.length <= 200 ? { cvssVector } : {}),
   };
 }
 

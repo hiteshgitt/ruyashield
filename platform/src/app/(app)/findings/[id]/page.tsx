@@ -1,3 +1,4 @@
+import { cvss3Score } from "@/server/assessments/deps";
 import { randomUUID } from "node:crypto";
 import { Suspense } from "react";
 import Link from "next/link";
@@ -114,7 +115,7 @@ async function Finding({ params }: { params: PageProps<"/findings/[id]">["params
             <div>Severity <b>{priority.inputs.severity}</b> × confidence <b>{priority.inputs.confidence}</b> × asset criticality <b>{priority.inputs.criticality}</b>{priority.criticalityDefault && <span className="muted"> (not set — medium assumed)</span>}</div>
             <div className="muted">Formula {priority.version}. {can.editAsset && <Link href={`/assets/${a.id}`}>Set asset criticality</Link>}</div>
             {f.severityReason && <div>Analyst override by {who(f.severitySetBy)}: “{f.severityReason}” (source said {f.sourceSeverity} / {f.sourceConfidence})</div>}
-            {f.cvssVector && <div>CVSS <code>{f.cvssVector}</code></div>}
+            {f.cvssVector && <div>CVSS {cvss3Score(f.cvssVector) != null && <b>{cvss3Score(f.cvssVector)!.toFixed(1)} </b>}<code>{f.cvssVector}</code></div>}
           </section>
           <section className="card stack small">
             <h3 className="card-label">Ownership</h3>

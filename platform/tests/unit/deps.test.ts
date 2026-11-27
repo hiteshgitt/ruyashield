@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { normalizeResult, type CheckContext } from "@/server/assessments/checks";
 import {
-  compareVersions, createOsvAdapter, cvss3Score, fixedVersion, lockfileParser, parseComposerLock, parseGemfileLock, parseGoSum,
+  compareVersions, createOsvAdapter, cvss3Score, cvssOf, dependencyFindings, fixedVersion, lockfileParser, parseComposerLock, parseGemfileLock, parseGoSum,
   parsePackageLock, parsePnpmLock, parseRequirements, parseTomlPackages, parseYarnLock, severityOf, type FetchLike, type OsvVuln,
 } from "@/server/assessments/deps";
 import type { RepoSnapshot } from "@/server/remediation/repo";
@@ -118,6 +118,24 @@ describe("severity and fixes", () => {
     expect(severityOf(vuln("GHSA-29mw-wpgm-hmr9"))).toBe("medium");
     expect(severityOf({ id: "X", database_specific: { severity: "CRITICAL" } })).toBe("critical");
     expect(severityOf({ id: "X" })).toBeNull();
+  });
+  it("keeps the highest-scoring CVSS vector on the finding, and passes it through validation", () => {
+    const v3 = (id: string, score: string): OsvVuln => ({ id, severity: [{ type: "CVSS_V3", score }] });
+    const low = v3("GHSA-aaaa", "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:N");
+    const high = v3("GHSA-bbbb", "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H");
+    const v4only: OsvVuln = { id: "GHSA-cccc", severity: [{ type: "CVSS_V4", score: "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N" }] };
+    expect(cvssOf(high)).toEqual({ score: 9.8, vector: high.severity![0].score });
+    expect(cvssOf(v4only)).toEqual({ score: null, vector: v4only.severity![0].score });
+    expect(cvssOf({ id: "X" })).toBeNull();
+    const pkg = { ecosystem: "npm" as const, name: "left-pad", version: "1.0.0" };
+    const lockfile = { path: "package-lock.json", sha256: "0".repeat(64), packages: [pkg] };
+    const f = dependencyFindings(lockfile as never, pkg, [low, high]);
+    expect(f.cvssVector).toBe(high.severity![0].score);
+    expect(dependencyFindings(lockfile as never, pkg, [v4only]).cvssVector).toBe(v4only.severity![0].score);
+    expect(dependencyFindings(lockfile as never, pkg, [{ id: "X" }]).cvssVector).toBeUndefined();
+    const ok = normalizeResult({ status: "ok", findings: [f], evidence: {} });
+    expect(ok.status === "ok" && ok.findings[0].cvssVector).toBe(f.cvssVector);
+    expect(normalizeResult({ status: "ok", findings: [{ ...f, cvssVector: "not a vector" }], evidence: {} }).status).toBe("error");
   });
   it("picks the lowest fix above the installed version for that exact package", () => {
     const pkg = { ecosystem: "npm" as const, name: "lodash", version: "4.17.15" };

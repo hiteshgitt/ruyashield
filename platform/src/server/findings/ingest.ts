@@ -25,6 +25,7 @@ export async function ingestFinding(tx: Tx, c: IngestContext, f: FindingCandidat
     orgId: c.orgId, assetId: c.assetId, fingerprint: fp, checkKey: c.checkKey, issueKey: f.issueKey, title: f.title,
     severity: f.severity, confidence, sourceSeverity: f.severity, sourceConfidence: confidence, location: f.location,
     lastAssessmentId: c.assessmentId, evidence: f.evidence, latestEvidenceId: ev.id, remediation: f.remediation, status: "new",
+    cvssVector: f.cvssVector ?? null,
   }).onConflictDoNothing({ target: [findings.orgId, findings.fingerprint] }).returning({ id: findings.id }))[0];
 
   if (inserted) {
@@ -39,6 +40,8 @@ export async function ingestFinding(tx: Tx, c: IngestContext, f: FindingCandidat
   await tx.update(findings).set({
     lastSeen: sql`now()`, lastAssessmentId: c.assessmentId, evidence: f.evidence, latestEvidenceId: ev.id, title: f.title,
     remediation: f.remediation, sourceSeverity: f.severity, sourceConfidence: confidence, missedRuns: 0, ...rating,
+    // A check that reports a vector keeps it current; one that reports none leaves an existing vector alone.
+    ...(f.cvssVector ? { cvssVector: f.cvssVector } : {}),
   }).where(eq(findings.id, cur.id));
 
   let next: { to: FindingStatus; reason: SystemReason } | null = null;

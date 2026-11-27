@@ -61,6 +61,8 @@ export interface FindingCandidate {
   location: string;
   evidence: Record<string, unknown>;
   remediation: string;
+  /** CVSS vector from the source advisory (v3.x, or v4.0 when no v3 vector exists). */
+  cvssVector?: string;
 }
 
 /** What one check observed. A check that could not observe what it needs reports an error, never "no findings". */
@@ -81,6 +83,7 @@ const candidate = z.object({
   location: z.string().min(1).max(300),
   evidence: z.record(z.string(), z.unknown()),
   remediation: z.string().max(1000),
+  cvssVector: z.string().max(200).regex(/^CVSS:(3\.[01]|4\.0)\/[A-Za-z]+:[A-Za-z](\/[A-Za-z]+:[A-Za-z])*$/).optional(),
 });
 const resultSchema = z.discriminatedUnion("status", [
   z.object({ status: z.literal("ok"), findings: z.array(candidate).max(50), evidence: z.record(z.string(), z.unknown()) }),
