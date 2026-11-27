@@ -42,6 +42,18 @@ const BY_ISSUE: Record<string, string> = {
   "code.secrets:*": V("AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N"),
   "web.blocklist:*": V("AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N"),
   "web.technology:*": V("AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:L"),
+  "pt.surface:config_backup_exposed": V("AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"),
+  "pt.surface:database_dump_exposed": V("AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"),
+  "pt.surface:wp_install_open": V("AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"),
+  "pt.surface:backup_archive_exposed": V("AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"),
+  "pt.surface:htpasswd_exposed": V("AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"),
+  "pt.surface:svn_exposed": V("AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"),
+  "pt.surface:phpinfo_exposed": V("AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"),
+  "pt.surface:server_status_exposed": V("AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"),
+  "pt.surface:debug_log_exposed": V("AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"),
+  "pt.surface:wp_user_enum_rest": V("AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"),
+  "pt.surface:login_over_http": V("AV:A/AC:L/PR:N/UI:R/S:U/C:H/I:N/A:N"),
+  "pt.surface:db_admin_exposed": V("AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:L/A:N"),
 };
 
 const band = (score: number): Severity => (score >= 9 ? "critical" : score >= 7 ? "high" : score >= 4 ? "medium" : score > 0 ? "low" : "info");

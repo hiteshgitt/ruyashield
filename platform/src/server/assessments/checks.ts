@@ -1,3 +1,4 @@
+import { createSurfaceAdapter } from "./surface";
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import type { Confidence, Severity } from "../db/schema";
@@ -34,7 +35,8 @@ import { createTakeoverAdapter } from "./takeover";
 // 0.13.0: code.iac (Terraform/Kubernetes/Compose/Dockerfile/GitHub Actions misconfigurations), web.blocklist (Safe Browsing, URLhaus);
 // 0.12.0: http.compromise (passive signs of injected scripts, miners, SEO spam, cloaking), http.cors, dns.takeover;
 //         http.security_headers reads at most 512 bytes of body.
-export const ENGINE_VERSION = "ruya-checks/0.14.0";
+// 0.15.0: pt.surface (automated penetration test, step 1): sensitive files, database admin tools, WordPress install/users/XML-RPC/login.
+export const ENGINE_VERSION = "ruya-checks/0.15.0";
 
 export interface CheckContext {
   host: string;
@@ -287,4 +289,4 @@ const caa: CheckAdapter = {
 };
 
 /** The executable catalogue. Anything not listed here cannot run, whatever the database says. */
-export const ADAPTERS: ReadonlyMap<string, CheckAdapter> = new Map([tls, headers, email, caa, osv, secrets, createSastAdapter(), createExposedServicesAdapter(), createCtAdapter(), createTlsConfigAdapter(), createExposureAdapter(), createContainerImageAdapter(), createCompromiseAdapter(), createCorsAdapter(), createTakeoverAdapter(), createIacAdapter(), createBlocklistAdapter(), createTechnologyAdapter(), createWebMonitorPackagesAdapter(), createWebMonitorFilesAdapter()].map((a) => [a.id, a]));
+export const ADAPTERS: ReadonlyMap<string, CheckAdapter> = new Map([tls, headers, email, caa, osv, secrets, createSastAdapter(), createExposedServicesAdapter(), createCtAdapter(), createTlsConfigAdapter(), createExposureAdapter(), createContainerImageAdapter(), createCompromiseAdapter(), createCorsAdapter(), createTakeoverAdapter(), createIacAdapter(), createBlocklistAdapter(), createTechnologyAdapter(), createWebMonitorPackagesAdapter(), createWebMonitorFilesAdapter(), createSurfaceAdapter()].map((a) => [a.id, a]));
