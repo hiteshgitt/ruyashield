@@ -1,3 +1,5 @@
+import { createInjectAdapter } from "./inject";
+import { createReflectAdapter } from "./reflect";
 import { createSurfaceAdapter } from "./surface";
 import { createHash } from "node:crypto";
 import { z } from "zod";
@@ -36,7 +38,9 @@ import { createTakeoverAdapter } from "./takeover";
 // 0.12.0: http.compromise (passive signs of injected scripts, miners, SEO spam, cloaking), http.cors, dns.takeover;
 //         http.security_headers reads at most 512 bytes of body.
 // 0.15.0: pt.surface (automated penetration test, step 1): sensitive files, database admin tools, WordPress install/users/XML-RPC/login.
-export const ENGINE_VERSION = "ruya-checks/0.15.0";
+// 0.16.0: pt.reflect (step 2, class A2): same-host crawl, reflected XSS marker test and open-redirect test.
+// 0.17.0: pt.inject (step 3, class A2): SQL injection (error and boolean, detection only) and path traversal.
+export const ENGINE_VERSION = "ruya-checks/0.17.0";
 
 export interface CheckContext {
   host: string;
@@ -289,4 +293,4 @@ const caa: CheckAdapter = {
 };
 
 /** The executable catalogue. Anything not listed here cannot run, whatever the database says. */
-export const ADAPTERS: ReadonlyMap<string, CheckAdapter> = new Map([tls, headers, email, caa, osv, secrets, createSastAdapter(), createExposedServicesAdapter(), createCtAdapter(), createTlsConfigAdapter(), createExposureAdapter(), createContainerImageAdapter(), createCompromiseAdapter(), createCorsAdapter(), createTakeoverAdapter(), createIacAdapter(), createBlocklistAdapter(), createTechnologyAdapter(), createWebMonitorPackagesAdapter(), createWebMonitorFilesAdapter(), createSurfaceAdapter()].map((a) => [a.id, a]));
+export const ADAPTERS: ReadonlyMap<string, CheckAdapter> = new Map([tls, headers, email, caa, osv, secrets, createSastAdapter(), createExposedServicesAdapter(), createCtAdapter(), createTlsConfigAdapter(), createExposureAdapter(), createContainerImageAdapter(), createCompromiseAdapter(), createCorsAdapter(), createTakeoverAdapter(), createIacAdapter(), createBlocklistAdapter(), createTechnologyAdapter(), createWebMonitorPackagesAdapter(), createWebMonitorFilesAdapter(), createSurfaceAdapter(), createReflectAdapter(), createInjectAdapter()].map((a) => [a.id, a]));

@@ -123,7 +123,7 @@ describe("result handling", () => {
 
   it("has no adapter for prohibited checks", () => {
     expect(ADAPTERS.has("x.exploit_payloads@1")).toBe(false);
-    expect([...ADAPTERS.keys()].sort()).toEqual(["code.iac@1", "code.sast@1", "code.secrets@1", "container.image@1", "deps.osv@1", "discovery.ct@1", "dns.caa@1", "dns.email_posture@1", "dns.takeover@1", "http.compromise@1", "http.cors@1", "http.exposure@1", "http.security_headers@1", "net.exposed_services@1", "pt.surface@1", "tls.cert_expiry@1", "tls.config@1", "web.blocklist@1", "web.technology@1", "webmonitor.files@1", "webmonitor.packages@1"]);
+    expect([...ADAPTERS.keys()].sort()).toEqual(["code.iac@1", "code.sast@1", "code.secrets@1", "container.image@1", "deps.osv@1", "discovery.ct@1", "dns.caa@1", "dns.email_posture@1", "dns.takeover@1", "http.compromise@1", "http.cors@1", "http.exposure@1", "http.security_headers@1", "net.exposed_services@1", "pt.inject@1", "pt.reflect@1", "pt.surface@1", "tls.cert_expiry@1", "tls.config@1", "web.blocklist@1", "web.technology@1", "webmonitor.files@1", "webmonitor.packages@1"]);
   });
 });
 
