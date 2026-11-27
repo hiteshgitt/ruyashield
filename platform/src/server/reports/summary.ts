@@ -1,3 +1,4 @@
+import { findingCvss, type Cvss } from "../assessments/ratings";
 import { and, desc, eq, gt, gte, inArray, isNull, or, sql, type SQL } from "drizzle-orm";
 import { withOrg, isUuid } from "../db/client";
 import {
@@ -29,7 +30,7 @@ export interface SecuritySummary {
   failedVerifications: { findingId: string; title: string; host: string; outcome: string; finishedAt: Date | null }[];
   incompleteAssessments: { id: string; host: string; status: string; reason: string | null; coverage: Coverage | null; finishedAt: Date | null }[];
   acceptedRisks: { findingId: string; title: string; severity: Severity; host: string; justification: string; expiresAt: Date }[];
-  topOpen: { id: string; title: string; severity: Severity; status: string; host: string; dueAt: Date | null }[];
+  topOpen: { id: string; title: string; severity: Severity; status: string; host: string; dueAt: Date | null; cvss: Cvss }[];
   onboarding: { hasAsset: boolean; hasVerifiedAsset: boolean; hasAssessment: boolean; hasCompletedAssessment: boolean; hasTeammate: boolean };
 }
 
@@ -128,12 +129,14 @@ export async function securitySummary(
       .orderBy(riskAcceptances.expiresAt).limit(100);
 
     const score = prioritySql(findings.severity, findings.confidence, assets.criticality);
-    const topOpen = await tx.select({ id: findings.id, title: findings.title, severity: findings.severity, status: findings.status, host: assets.host, dueAt: findings.dueAt })
+    const topOpen = await tx.select({ id: findings.id, title: findings.title, severity: findings.severity, status: findings.status, host: assets.host, dueAt: findings.dueAt,
+      cvssVector: findings.cvssVector, checkKey: findings.checkKey, issueKey: findings.issueKey })
       .from(findings).innerJoin(assets, eq(assets.id, findings.assetId)).where(and(open, inScope)).orderBy(desc(score), findings.id).limit(10)
       .then(async (rows) => {
-        if (isProOrg(c.org)) return rows;
+        const shaped = rows.map(({ cvssVector, checkKey, issueKey, ...r }) => ({ ...r, cvss: findingCvss({ cvssVector, checkKey, issueKey, severity: r.severity }) }));
+        if (isProOrg(c.org)) return shaped;
         const visible = await freeVisibleIds(tx, c);
-        return rows.filter((r) => visible.has(r.id));
+        return shaped.filter((r) => visible.has(r.id));
       });
 
     const [m] = await tx.select({ count: sql<number>`count(*)` }).from(memberships).where(eq(memberships.orgId, c.org.id));

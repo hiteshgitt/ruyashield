@@ -1,3 +1,4 @@
+import { findingCvss, type Cvss } from "../assessments/ratings";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { withOrg } from "../db/client";
@@ -61,7 +62,7 @@ export const MAX_FINDINGS = 300;
 
 export interface ReportDetail {
   assets: { host: string; name: string; environment: string; status: string; verifiedAt: Date | null; lastStatus: string | null; lastFinishedAt: Date | null; open: Record<Severity, number> }[];
-  findings: { title: string; host: string; severity: Severity; status: string; location: string; firstSeen: Date; dueAt: Date | null; remediation: string | null }[];
+  findings: { title: string; host: string; severity: Severity; status: string; location: string; firstSeen: Date; dueAt: Date | null; remediation: string | null; cvss: Cvss }[];
   findingsTotal: number;
   attacks: AttackStats | null;
 }
@@ -99,7 +100,7 @@ export async function reportDetail(c: Ctx, o: ResolvedOptions, clientGroupId: st
         .where(where).orderBy(desc(score), findings.id).limit(MAX_FINDINGS);
       findingRows = rows.map(({ f, host }) => ({
         title: f.title, host, severity: f.severity, status: f.status, location: f.location, firstSeen: f.firstSeen, dueAt: f.dueAt,
-        remediation: o.includeFixes ? f.remediation : null,
+        remediation: o.includeFixes ? f.remediation : null, cvss: findingCvss(f),
       }));
     }
     return { assets: assetRows, findings: findingRows, findingsTotal, attacks: null };

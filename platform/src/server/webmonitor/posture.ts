@@ -1,4 +1,4 @@
-import { cvss3Score } from "../assessments/deps";
+import { findingCvss } from "../assessments/ratings";
 import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { withOrg } from "../db/client";
 import { assessments, assets, auditEvents, codeChanges, findings, remediationPlans, type AssessmentStatus, type Severity } from "../db/schema";
@@ -27,7 +27,7 @@ export type HostPosture =
   | {
     host: string; tracked: true;
     asset: { id: string; name: string; status: string; verifiedAt: Date | null };
-    findings: { open: Record<Severity, number>; openTotal: number; top: { title: string; severity: Severity; cvss?: { score: number | null; vector: string } }[] } | null;
+    findings: { open: Record<Severity, number>; openTotal: number; top: { title: string; severity: Severity; cvss: { score: number | null; vector: string; source: "advisory" | "rated" } }[] } | null;
     lastAssessment: { status: AssessmentStatus; finishedAt: Date | null; complete: boolean | null } | null;
     changes: SiteChange[];
     link: string;
@@ -85,9 +85,10 @@ export async function hostPosture(c: Ctx, hosts: string[], now = new Date()): Pr
       .from(findings).where(and(inArray(findings.assetId, findingIds), inArray(findings.status, [...OPEN_STATUSES])))
       .groupBy(findings.assetId, findings.severity) : [];
 
-    const top = findingIds.length ? await tx.execute<{ asset_id: string; title: string; severity: Severity; cvss_vector: string | null }>(sql`
-      SELECT asset_id, title, severity, cvss_vector FROM (
+    const top = findingIds.length ? await tx.execute<{ asset_id: string; title: string; severity: Severity; cvss_vector: string | null; check_key: string; issue_key: string }>(sql`
+      SELECT asset_id, title, severity, cvss_vector, check_key, issue_key FROM (
         SELECT ${findings.assetId} AS asset_id, ${findings.title} AS title, ${findings.severity} AS severity, ${findings.cvssVector} AS cvss_vector,
+          ${findings.checkKey} AS check_key, ${findings.issueKey} AS issue_key,
           row_number() OVER (PARTITION BY ${findings.assetId} ORDER BY ${SEV_RANK} DESC, ${findings.lastSeen} DESC) AS rn
         FROM ${findings}
         WHERE ${inArray(findings.assetId, findingIds)} AND ${inArray(findings.status, [...OPEN_STATUSES])}
@@ -114,7 +115,7 @@ export async function hostPosture(c: Ctx, hosts: string[], now = new Date()): Pr
           f = {
             open, openTotal: Object.values(open).reduce((x, y) => x + y, 0),
             top: top.rows.filter((r) => r.asset_id === a.id)
-              .map((r) => ({ title: r.title, severity: r.severity, ...(r.cvss_vector ? { cvss: { score: cvss3Score(r.cvss_vector), vector: r.cvss_vector } } : {}) }))
+              .map((r) => ({ title: r.title, severity: r.severity, cvss: findingCvss({ cvssVector: r.cvss_vector, checkKey: r.check_key, issueKey: r.issue_key, severity: r.severity }) }))
               .sort((x, y) => SEVERITIES.indexOf(x.severity) - SEVERITIES.indexOf(y.severity)),
           };
         }

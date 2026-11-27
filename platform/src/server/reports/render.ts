@@ -38,7 +38,7 @@ export function reportLines(s: SecuritySummary, orgName: string): string[] {
     "ASSESSMENTS (window)",
     `  Completed ${s.assessments.completed}; completed with errors ${s.assessments.completedWithErrors}; failed, timed out or rejected ${s.assessments.failed}; last completed ${d(s.assessments.lastCompletedAt)}`, "",
     "HIGHEST-PRIORITY OPEN FINDINGS",
-    ...(s.topOpen.length ? s.topOpen.map((f) => `  [${f.severity}] ${f.title} - ${f.host} - ${f.status} - due ${d(f.dueAt)}`) : ["  None in the assessed scope (this is not a guarantee that no issues exist)."]), "",
+    ...(s.topOpen.length ? s.topOpen.map((f) => `  [${f.severity}] ${f.title} - ${f.host} - ${f.status}${f.cvss?.score != null ? ` - CVSS ${f.cvss.score.toFixed(1)}${f.cvss.source === "rated" ? " (rated)" : ""}` : ""} - due ${d(f.dueAt)}`) : ["  None in the assessed scope (this is not a guarantee that no issues exist)."]), "",
     "FAILED OR INCONCLUSIVE VERIFICATION RE-TESTS",
     ...(s.failedVerifications.length ? s.failedVerifications.map((v) => `  ${v.title} - ${v.host} - ${v.outcome} - ${d(v.finishedAt)}`) : ["  None"]), "",
     "INCOMPLETE ASSESSMENTS",
@@ -115,7 +115,7 @@ export function reportBlocks(s: SecuritySummary, detail: ReportDetail, o: Resolv
   ] });
   B.push({ t: "p", text: `Open findings by severity: critical ${sev.critical}, high ${sev.high}, medium ${sev.medium}, low ${sev.low}, info ${sev.info}. Untriaged critical: ${s.findings.untriagedCritical}.`, muted: true });
   B.push({ t: "h2", text: "Highest-priority open findings" });
-  if (s.topOpen.length) for (const f of s.topOpen.slice(0, has("findings") ? 5 : 10)) B.push({ t: "finding", severity: f.severity, title: f.title, meta: `${f.host} - ${words(f.status)}${f.dueAt ? ` - due ${day(f.dueAt)}` : ""}` });
+  if (s.topOpen.length) for (const f of s.topOpen.slice(0, has("findings") ? 5 : 10)) B.push({ t: "finding", severity: f.severity, title: f.title, meta: `${f.host} - ${words(f.status)}${f.cvss?.score != null ? ` - CVSS ${f.cvss.score.toFixed(1)}${f.cvss.source === "rated" ? " (rated)" : ""}` : ""}${f.dueAt ? ` - due ${day(f.dueAt)}` : ""}` });
   else B.push({ t: "p", text: "No open findings in the assessed scope. This reflects the checks that ran, not a guarantee that no issues exist.", muted: true });
   B.push({ t: "note", text: NOT_A_CERTIFICATION });
 
@@ -129,7 +129,7 @@ export function reportBlocks(s: SecuritySummary, detail: ReportDetail, o: Resolv
     B.push({ t: "h1", text: "Open findings" });
     B.push({ t: "p", text: `${detail.findingsTotal} open finding${detail.findingsTotal === 1 ? "" : "s"} of ${o.minSeverity} severity or higher, highest priority first${detail.findingsTotal > detail.findings.length ? `; the first ${detail.findings.length} are listed` : ""}.`, muted: true });
     for (const f of detail.findings) {
-      B.push({ t: "finding", severity: f.severity, title: f.title, meta: `${f.host} - ${f.location} - ${words(f.status)} - first seen ${day(f.firstSeen)}${f.dueAt ? ` - due ${day(f.dueAt)}` : ""}`, body: f.remediation ? `Fix: ${f.remediation}` : undefined });
+      B.push({ t: "finding", severity: f.severity, title: f.title, meta: `${f.host} - ${f.location} - ${words(f.status)}${f.cvss?.score != null ? ` - CVSS ${f.cvss.score.toFixed(1)}${f.cvss.source === "rated" ? " (rated)" : ""}` : ""} - first seen ${day(f.firstSeen)}${f.dueAt ? ` - due ${day(f.dueAt)}` : ""}`, body: f.remediation ? `Fix: ${f.remediation}` : undefined });
     }
     if (!detail.findings.length) B.push({ t: "p", text: "None at this severity in the assessed scope.", muted: true });
   }
